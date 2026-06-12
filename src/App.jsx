@@ -1,39 +1,6 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 
-// Typing animation helper: simulates backspacing/rubbing and then typing the new code
-const animateCodeChange = (oldCode, targetCode, setCodeCallback) => {
-  let commonPrefixLength = 0;
-  const minLength = Math.min(oldCode.length, targetCode.length);
-  while (commonPrefixLength < minLength && oldCode[commonPrefixLength] === targetCode[commonPrefixLength]) {
-    commonPrefixLength++;
-  }
-
-  let currentText = oldCode;
-  const totalToDelete = oldCode.length - commonPrefixLength;
-  const totalToType = targetCode.length - commonPrefixLength;
-  
-  // Calculate speed based on size to ensure it runs fast but visibly
-  const deletionSpeed = Math.max(1, Math.ceil(totalToDelete / 15)); 
-  const typingSpeed = Math.max(1, Math.ceil(totalToType / 15));
-
-  const intervalId = setInterval(() => {
-    if (currentText.length > commonPrefixLength) {
-      // Deleting / Backspacing
-      currentText = currentText.substring(0, Math.max(commonPrefixLength, currentText.length - deletionSpeed));
-      setCodeCallback(currentText);
-    } else if (currentText.length < targetCode.length) {
-      // Typing
-      currentText = targetCode.substring(0, Math.min(targetCode.length, currentText.length + typingSpeed));
-      setCodeCallback(currentText);
-    } else {
-      // Completed
-      clearInterval(intervalId);
-      setCodeCallback(targetCode);
-    }
-  }, 10);
-};
-
 function App() {
   const [code, setCode] = useState('display "Hello World\n! VS# knows there is a missing quote here');
   const [output, setOutput] = useState([
@@ -52,29 +19,74 @@ function App() {
     { type: 'system', text: "I'm VS#, your VerScript AI assistant. I'm connected to your editor! Ask me to check your code." }
   ]);
   const [chatInput, setChatInput] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const animateTextTransition = async (targetCode) => {
+    setIsAnimating(true);
+    let current = '';
+    setCode(prev => {
+      current = prev;
+      return prev;
+    });
+
+    // Find the common prefix
+    let commonPrefix = '';
+    const minLen = Math.min(current.length, targetCode.length);
+    for (let i = 0; i < minLen; i++) {
+      if (current[i] === targetCode[i]) {
+        commonPrefix += current[i];
+      } else {
+        break;
+      }
+    }
+
+    // Backspacing animation
+    const totalBackspaces = current.length - commonPrefix.length;
+    const backspaceStepTime = Math.max(5, Math.min(30, Math.floor(1500 / (totalBackspaces || 1))));
+    while (current.length > commonPrefix.length) {
+      current = current.slice(0, -1);
+      setCode(current);
+      await new Promise(resolve => setTimeout(resolve, backspaceStepTime));
+    }
+
+    // Typing animation
+    const totalTyping = targetCode.length - commonPrefix.length;
+    const typingStepTime = Math.max(8, Math.min(45, Math.floor(2000 / (totalTyping || 1))));
+    while (current.length < targetCode.length) {
+      current += targetCode[current.length];
+      setCode(current);
+      await new Promise(resolve => setTimeout(resolve, typingStepTime));
+    }
+
+    setIsAnimating(false);
+  };
 
   const handleAiSubmit = async (e) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || isAnimating) return;
 
     const userMsg = chatInput;
     setChatMessages(prev => [...prev, { type: 'user', text: userMsg }]);
     setChatInput('');
 
     try {
-      const res = await fetch('http://localhost:3001/api/chat', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ code: code, message: userMsg })
+      const res = await fetch('https://loud-eels-send.loca.lt/api/chat', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({ code: code, message: userMsg })
       });
       const data = await res.json();
       setChatMessages(prev => [...prev, { type: 'system', text: data.response || "Sorry, I couldn't process that." }]);
       
-      if (data.newCode && data.newCode !== code) {
-          animateCodeChange(code, data.newCode, setCode);
+      // Execute transition animation if action payload demands code edit
+      if (data.action && data.action.type === 'edit') {
+        await animateTextTransition(data.action.code);
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { type: 'system', text: "Error connecting to VS# Backend on port 3001." }]);
+      setChatMessages(prev => [...prev, { type: 'system', text: "Error connecting to VS# Backend. Please verify service is running." }]);
     }
   };
 
@@ -199,7 +211,7 @@ function App() {
           >
             ✨ VS#
           </button>
-          <a href="http://localhost:8000/docs/index.html" target="_blank" rel="noreferrer" className="btn" style={{textDecoration: 'none'}}>📖 Docs</a>
+          <a href="https://verscript.github.io/docs/index.html" target="_blank" rel="noreferrer" className="btn" style={{textDecoration: 'none'}}>📖 Docs</a>
           <button className="btn">Share</button>
           <button className="btn btn-run" onClick={handleRun}>▶ Run Code</button>
         </div>
@@ -229,12 +241,17 @@ function App() {
               defaultLanguage="javascript"
               theme="vs-dark"
               value={code}
-              onChange={(value) => setCode(value || '')}
+              onChange={(value) => {
+                if (!isAnimating) {
+                  setCode(value || '');
+                }
+              }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
                 fontFamily: "'Courier New', Courier, monospace",
-                padding: { top: 20 }
+                padding: { top: 20 },
+                readOnly: isAnimating
               }}
             />
             
