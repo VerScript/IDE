@@ -1,6 +1,39 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 
+// Typing animation helper: simulates backspacing/rubbing and then typing the new code
+const animateCodeChange = (oldCode, targetCode, setCodeCallback) => {
+  let commonPrefixLength = 0;
+  const minLength = Math.min(oldCode.length, targetCode.length);
+  while (commonPrefixLength < minLength && oldCode[commonPrefixLength] === targetCode[commonPrefixLength]) {
+    commonPrefixLength++;
+  }
+
+  let currentText = oldCode;
+  const totalToDelete = oldCode.length - commonPrefixLength;
+  const totalToType = targetCode.length - commonPrefixLength;
+  
+  // Calculate speed based on size to ensure it runs fast but visibly
+  const deletionSpeed = Math.max(1, Math.ceil(totalToDelete / 15)); 
+  const typingSpeed = Math.max(1, Math.ceil(totalToType / 15));
+
+  const intervalId = setInterval(() => {
+    if (currentText.length > commonPrefixLength) {
+      // Deleting / Backspacing
+      currentText = currentText.substring(0, Math.max(commonPrefixLength, currentText.length - deletionSpeed));
+      setCodeCallback(currentText);
+    } else if (currentText.length < targetCode.length) {
+      // Typing
+      currentText = targetCode.substring(0, Math.min(targetCode.length, currentText.length + typingSpeed));
+      setCodeCallback(currentText);
+    } else {
+      // Completed
+      clearInterval(intervalId);
+      setCodeCallback(targetCode);
+    }
+  }, 10);
+};
+
 function App() {
   const [code, setCode] = useState('display "Hello World\n! VS# knows there is a missing quote here');
   const [output, setOutput] = useState([
@@ -30,12 +63,16 @@ function App() {
 
     try {
       const res = await fetch('http://localhost:3001/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code, message: userMsg })
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ code: code, message: userMsg })
       });
       const data = await res.json();
       setChatMessages(prev => [...prev, { type: 'system', text: data.response || "Sorry, I couldn't process that." }]);
+      
+      if (data.newCode && data.newCode !== code) {
+          animateCodeChange(code, data.newCode, setCode);
+      }
     } catch (err) {
       setChatMessages(prev => [...prev, { type: 'system', text: "Error connecting to VS# Backend on port 3001." }]);
     }
