@@ -21,13 +21,9 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const animateTextTransition = async (targetCode) => {
+  const animateTextTransition = async (startCode, targetCode) => {
     setIsAnimating(true);
-    let current = '';
-    setCode(prev => {
-      current = prev;
-      return prev;
-    });
+    let current = startCode;
 
     // Find the common prefix
     let commonPrefix = '';
@@ -83,7 +79,7 @@ function App() {
       
       // Execute transition animation if action payload demands code edit
       if (data.action && data.action.type === 'edit') {
-        await animateTextTransition(data.action.code);
+        await animateTextTransition(code, data.action.code);
       }
     } catch (err) {
       setChatMessages(prev => [...prev, { type: 'system', text: "Error connecting to VS# Backend. Please verify service is running." }]);
