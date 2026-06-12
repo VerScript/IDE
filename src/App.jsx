@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function App() {
   const [code, setCode] = useState('display "Hello World\n! VS# knows there is a missing quote here');
@@ -20,20 +22,19 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const isAnimatingRef = useRef(false);
 
   const animateTextTransition = async (startCode, targetCode) => {
+    isAnimatingRef.current = true;
     setIsAnimating(true);
     let current = startCode;
 
-    // Find the common prefix
+    // Find the common prefix using a while loop to prevent compiler shadowing
     let commonPrefix = '';
-    const minLen = Math.min(current.length, targetCode.length);
-    for (let i = 0; i < minLen; i++) {
-      if (current[i] === targetCode[i]) {
-        commonPrefix += current[i];
-      } else {
-        break;
-      }
+    let idx = 0;
+    while (idx < current.length && idx < targetCode.length && current[idx] === targetCode[idx]) {
+      commonPrefix += current[idx];
+      idx++;
     }
 
     // Backspacing animation
@@ -42,7 +43,7 @@ function App() {
     while (current.length > commonPrefix.length) {
       current = current.slice(0, -1);
       setCode(current);
-      await new Promise(resolve => setTimeout(resolve, backspaceStepTime));
+      await sleep(backspaceStepTime);
     }
 
     // Typing animation
@@ -51,15 +52,16 @@ function App() {
     while (current.length < targetCode.length) {
       current += targetCode[current.length];
       setCode(current);
-      await new Promise(resolve => setTimeout(resolve, typingStepTime));
+      await sleep(typingStepTime);
     }
 
+    isAnimatingRef.current = false;
     setIsAnimating(false);
   };
 
   const handleAiSubmit = async (e) => {
     e.preventDefault();
-    if (!chatInput.trim() || isAnimating) return;
+    if (!chatInput.trim() || isAnimatingRef.current) return;
 
     const userMsg = chatInput;
     setChatMessages(prev => [...prev, { type: 'user', text: userMsg }]);
@@ -238,7 +240,7 @@ function App() {
               theme="vs-dark"
               value={code}
               onChange={(value) => {
-                if (!isAnimating) {
+                if (!isAnimatingRef.current) {
                   setCode(value || '');
                 }
               }}
