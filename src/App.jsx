@@ -1,238 +1,226 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// ─── Backend URL ──────────────────────────────────────────────────
+const VS_SHARP_API = 'https://vs-sharp.onrender.com';
+
 function App() {
-  const [code, setCode] = useState('display "Hello World\n! VS# knows there is a missing quote here');
+  const [code, setCode] = useState(
+    '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name'
+  );
   const [output, setOutput] = useState([
-    { type: 'cmd', text: 'VerScript VM initialized v1.1.0' },
-    { type: 'success', text: 'Ready for execution. (Math & Variables Enabled)' }
+    { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by vs-sharp.onrender.com' },
+    { type: 'success', text: 'Ready. Press ▶ Run Code to execute.' }
   ]);
-  const [isPrompting, setIsPrompting] = useState(false);
-  const [promptVar, setPromptVar] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [variables, setVariables] = useState({});
-  const [executionQueue, setExecutionQueue] = useState([]);
-  
+  const [isRunning, setIsRunning] = useState(false);
+
   // VS# State
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { type: 'system', text: "I'm VS#, your VerScript AI assistant. I'm connected to your editor! Ask me to check your code." }
+    { type: 'system', text: "I'm VS#, your VerScript AI assistant. I run on a custom neural network trained from scratch. Ask me to explain, write, or fix your code!" }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   const isAnimatingRef = useRef(false);
+  const terminalRef = useRef(null);
+  const chatRef = useRef(null);
 
+  // Auto-scroll terminal and chat
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [output]);
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // ─── Animated code transition ────────────────────────────────────
   const animateTextTransition = async (startCode, targetCode) => {
     isAnimatingRef.current = true;
     setIsAnimating(true);
     let current = startCode;
 
-    // Find the common prefix using a while loop to prevent compiler shadowing
-    let commonPrefix = '';
     let idx = 0;
-    while (idx < current.length && idx < targetCode.length && current[idx] === targetCode[idx]) {
-      commonPrefix += current[idx];
-      idx++;
-    }
+    while (idx < current.length && idx < targetCode.length && current[idx] === targetCode[idx]) idx++;
+    const commonPrefix = current.slice(0, idx);
 
-    // Backspacing animation
     const totalBackspaces = current.length - commonPrefix.length;
-    const backspaceStepTime = Math.max(5, Math.min(30, Math.floor(1500 / (totalBackspaces || 1))));
+    const bsTime = Math.max(5, Math.min(30, Math.floor(1500 / (totalBackspaces || 1))));
     while (current.length > commonPrefix.length) {
       current = current.slice(0, -1);
       setCode(current);
-      await sleep(backspaceStepTime);
+      await sleep(bsTime);
     }
 
-    // Typing animation
     const totalTyping = targetCode.length - commonPrefix.length;
-    const typingStepTime = Math.max(8, Math.min(45, Math.floor(2000 / (totalTyping || 1))));
+    const typeTime = Math.max(8, Math.min(45, Math.floor(2000 / (totalTyping || 1))));
     while (current.length < targetCode.length) {
       current += targetCode[current.length];
       setCode(current);
-      await sleep(typingStepTime);
+      await sleep(typeTime);
     }
 
     isAnimatingRef.current = false;
     setIsAnimating(false);
   };
 
+  // ─── VS# Chat Submit ─────────────────────────────────────────────
   const handleAiSubmit = async (e) => {
     e.preventDefault();
     if (!chatInput.trim() || isAnimatingRef.current) return;
 
-    const userMsg = chatInput;
+    const userMsg = chatInput.trim();
     setChatMessages(prev => [...prev, { type: 'user', text: userMsg }]);
     setChatInput('');
+    setChatMessages(prev => [...prev, { type: 'system', text: '⏳ VS# is thinking...' }]);
 
     try {
-      const res = await fetch('https://loud-eels-send.loca.lt/api/chat', {
+      const res = await fetch(`${VS_SHARP_API}/api/chat`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Bypass-Tunnel-Reminder': 'true'
-        },
-        body: JSON.stringify({ code: code, message: userMsg })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, message: userMsg })
       });
+
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
       const data = await res.json();
-      setChatMessages(prev => [...prev, { type: 'system', text: data.response || "Sorry, I couldn't process that." }]);
-      
-      // Execute transition animation if action payload demands code edit
+
+      // Replace the "thinking" placeholder with actual response
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { type: 'system', text: data.response || "Sorry, I couldn't process that." }
+      ]);
+
       if (data.action && data.action.type === 'edit') {
         await animateTextTransition(code, data.action.code);
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { type: 'system', text: "Error connecting to VS# Backend. Please verify service is running." }]);
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { type: 'system', text: `⚠️ Could not reach VS# backend: ${err.message}` }
+      ]);
     }
   };
 
-  const executeLine = (line, currentVars) => {
-    let trimmed = line;
-    const commentIdx = trimmed.indexOf('!');
-    if (commentIdx !== -1) {
-      trimmed = trimmed.substring(0, commentIdx);
-    }
-    trimmed = trimmed.trim();
-    if (!trimmed) return { vars: currentVars, wait: false };
-
-    // Handle string display
-    if (trimmed.startsWith('display "') && trimmed.endsWith('"')) {
-      const content = trimmed.substring(9, trimmed.length - 1);
-      setOutput(prev => [...prev, { type: 'success', text: content }]);
-      return { vars: currentVars, wait: false };
-    }
-
-    // Handle variable/math display
-    if (trimmed.startsWith('display ')) {
-      const expr = trimmed.substring(8).trim();
-      try {
-        let evalStr = expr;
-        Object.keys(currentVars).forEach(k => {
-          const val = currentVars[k];
-          evalStr = evalStr.replace(new RegExp(`\\b${k}\\b`, 'g'), typeof val === 'string' ? `"${val}"` : val);
-        });
-        
-        if (evalStr.startsWith('"') && evalStr.endsWith('"')) {
-          setOutput(prev => [...prev, { type: 'success', text: evalStr.substring(1, evalStr.length - 1) }]);
-        } else {
-          const result = eval(evalStr);
-          setOutput(prev => [...prev, { type: 'success', text: result.toString() }]);
-        }
-      } catch (e) {
-        setOutput(prev => [...prev, { type: 'error', text: `ERROR: Cannot evaluate '${expr}'` }]);
-      }
-      return { vars: currentVars, wait: false };
-    }
-
-    // Handle prompt
-    if (trimmed.startsWith('prompt ')) {
-      const varName = trimmed.substring(7).trim();
-      setPromptVar(varName);
-      setIsPrompting(true);
-      return { vars: currentVars, wait: true };
-    }
-
-    // Handle variable assignment (var: expr)
-    if (trimmed.includes(':')) {
-      const parts = trimmed.split(':');
-      const varName = parts[0].trim();
-      const expr = parts.slice(1).join(':').trim();
-      
-      if (expr.startsWith('"') && expr.endsWith('"')) {
-        currentVars[varName] = expr.substring(1, expr.length - 1);
-      } else {
-        try {
-          let evalStr = expr;
-          Object.keys(currentVars).forEach(k => {
-            evalStr = evalStr.replace(new RegExp(`\\b${k}\\b`, 'g'), currentVars[k]);
-          });
-          currentVars[varName] = eval(evalStr);
-        } catch (e) {
-          setOutput(prev => [...prev, { type: 'error', text: `ERROR: Invalid expression '${expr}'` }]);
-        }
-      }
-      return { vars: currentVars, wait: false };
-    }
-
-    setOutput(prev => [...prev, { type: 'error', text: `ERROR: Syntax error near '${trimmed}'` }]);
-    return { vars: currentVars, wait: false };
-  };
-
-  const processQueue = (queue, vars) => {
-    let currentVars = { ...vars };
-    for (let i = 0; i < queue.length; i++) {
-      const result = executeLine(queue[i], currentVars);
-      currentVars = result.vars;
-      if (result.wait) {
-        setExecutionQueue(queue.slice(i + 1));
-        setVariables(currentVars);
-        return; 
-      }
-    }
-    
-    setOutput(prev => [...prev, { type: 'cmd', text: 'Program completed successfully.' }]);
-    setExecutionQueue([]);
-    setVariables(currentVars);
-  };
-
-  const handleRun = () => {
+  // ─── Run Code via VS-Sharp /run endpoint ─────────────────────────
+  const handleRun = async () => {
+    if (isRunning) return;
+    setIsRunning(true);
     setOutput(prev => [...prev, { type: 'cmd', text: '> verscript test.vrs' }]);
-    setIsPrompting(false);
-    const lines = code.split('\n');
-    processQueue(lines, {});
+
+    try {
+      const res = await fetch(`${VS_SHARP_API}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+
+      // Parse stdout lines
+      if (data.output) {
+        const lines = data.output.split('\n').filter(l => l !== '');
+        lines.forEach(line => {
+          const isError = line.startsWith('ERROR') || line.startsWith('LEXER ERROR');
+          setOutput(prev => [...prev, { type: isError ? 'error' : 'success', text: line }]);
+        });
+      }
+
+      // Any stderr / exec errors
+      if (data.error && data.error.trim()) {
+        data.error.trim().split('\n').forEach(line => {
+          setOutput(prev => [...prev, { type: 'error', text: line }]);
+        });
+      }
+
+      setOutput(prev => [...prev, { type: 'cmd', text: 'Program completed.' }]);
+    } catch (err) {
+      setOutput(prev => [
+        ...prev,
+        { type: 'error', text: `⚠️ Could not reach run endpoint: ${err.message}` },
+        { type: 'error', text: 'Hint: The Render service may be waking up (free tier). Try again in ~30s.' }
+      ]);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
-  const handlePromptSubmit = (e) => {
-    e.preventDefault();
-    const parsedVal = isNaN(Number(inputValue)) || inputValue.trim() === '' ? inputValue : Number(inputValue);
-    const newVars = { ...variables, [promptVar]: parsedVal };
-    setVariables(newVars);
-    setOutput(prev => [...prev, { type: 'success', text: `> ${inputValue}` }]);
-    setIsPrompting(false);
-    setInputValue('');
-    processQueue(executionQueue, newVars);
+  const handleClearTerminal = () => {
+    setOutput([
+      { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by vs-sharp.onrender.com' },
+      { type: 'success', text: 'Terminal cleared.' }
+    ]);
   };
 
   return (
     <div className="ide-container">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="ide-header">
         <div className="logo-container">
           <div className="logo-text">VerScript IDE</div>
         </div>
         <div className="header-actions">
-          <button 
-            className={`btn btn-ai ${isAiOpen ? 'active' : ''}`} 
+          <button
+            id="btnVsSharp"
+            className={`btn btn-ai ${isAiOpen ? 'active' : ''}`}
             onClick={() => setIsAiOpen(!isAiOpen)}
+            title="Toggle VS# AI Assistant"
           >
             ✨ VS#
           </button>
-          <a href="https://verscript.github.io/docs/index.html" target="_blank" rel="noreferrer" className="btn" style={{textDecoration: 'none'}}>📖 Docs</a>
-          <button className="btn">Share</button>
-          <button className="btn btn-run" onClick={handleRun}>▶ Run Code</button>
+          <a
+            id="btnDocs"
+            href="https://verscript.github.io/docs/index.html"
+            target="_blank"
+            rel="noreferrer"
+            className="btn"
+            style={{ textDecoration: 'none' }}
+          >
+            📖 Docs
+          </a>
+          <button id="btnShare" className="btn" onClick={() => {
+            navigator.clipboard?.writeText(code);
+          }} title="Copy code to clipboard">
+            📋 Copy
+          </button>
+          <button
+            id="btnRun"
+            className="btn btn-run"
+            onClick={handleRun}
+            disabled={isRunning}
+            title="Run your VerScript code"
+          >
+            {isRunning ? '⏳ Running…' : '▶ Run Code'}
+          </button>
         </div>
       </div>
 
       <div className="ide-body">
-        {/* Sidebar */}
+        {/* ── Sidebar ── */}
         <div className="sidebar">
           <div className="sidebar-header">Explorer</div>
           <ul className="file-list">
             <li className="file-item active">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                <polyline points="13 2 13 9 20 9"></polyline>
+              </svg>
               test.vrs
             </li>
           </ul>
         </div>
 
-        {/* Editor Area */}
+        {/* ── Editor Area ── */}
         <div className="editor-container">
           <div className="editor-tabs">
             <div className="editor-tab active">test.vrs</div>
           </div>
-          
+
           <div className="editor-wrapper">
             <Editor
               height="100%"
@@ -240,26 +228,33 @@ function App() {
               theme="vs-dark"
               value={code}
               onChange={(value) => {
-                if (!isAnimatingRef.current) {
-                  setCode(value || '');
-                }
+                if (!isAnimatingRef.current) setCode(value || '');
               }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
                 fontFamily: "'Courier New', Courier, monospace",
                 padding: { top: 20 },
-                readOnly: isAnimating
+                readOnly: isAnimating,
+                wordWrap: 'on',
+                scrollBeyondLastLine: false
               }}
             />
-            
-            {/* AI Panel Overlay */}
+
+            {/* ── VS# AI Panel ── */}
             <div className={`ai-panel ${isAiOpen ? 'open' : ''}`}>
               <div className="ai-header">
                 <span>✨ VS# Assistant</span>
-                <button onClick={() => setIsAiOpen(false)} style={{background:'none', border:'none', color:'white', cursor:'pointer'}}>✕</button>
+                <button
+                  id="btnCloseAi"
+                  onClick={() => setIsAiOpen(false)}
+                  style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.1rem' }}
+                  aria-label="Close VS# panel"
+                >
+                  ✕
+                </button>
               </div>
-              <div className="ai-messages">
+              <div className="ai-messages" ref={chatRef}>
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`ai-msg ${msg.type}`}>
                     {msg.text}
@@ -267,47 +262,38 @@ function App() {
                 ))}
               </div>
               <form className="ai-input-area" onSubmit={handleAiSubmit}>
-                <input 
-                  type="text" 
-                  className="ai-input" 
-                  placeholder="Ask VS# about your code..."
+                <input
+                  id="aiChatInput"
+                  type="text"
+                  className="ai-input"
+                  placeholder="Ask VS# about your code…"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
+                  disabled={isAnimating}
                 />
               </form>
             </div>
           </div>
-          
-          {/* Terminal Area */}
+
+          {/* ── Terminal ── */}
           <div className="terminal-panel">
-            <div className="terminal-header">Terminal Output</div>
-            <div className="terminal-output" style={{display: 'flex', flexDirection: 'column'}}>
+            <div className="terminal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Terminal Output</span>
+              <button
+                id="btnClearTerminal"
+                onClick={handleClearTerminal}
+                style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.75rem' }}
+                title="Clear terminal"
+              >
+                clear
+              </button>
+            </div>
+            <div className="terminal-output" ref={terminalRef} style={{ display: 'flex', flexDirection: 'column' }}>
               {output.map((line, i) => (
                 <div key={i} className={`terminal-line ${line.type}`}>
                   {line.text}
                 </div>
               ))}
-              
-              {isPrompting && (
-                <form onSubmit={handlePromptSubmit} style={{display: 'flex', marginTop: '5px'}}>
-                  <span style={{color: '#00FFCC', marginRight: '8px'}}>[PROMPT: {promptVar}] &gt;</span>
-                  <input 
-                    autoFocus
-                    type="text" 
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    style={{
-                      background: 'transparent', 
-                      border: 'none', 
-                      color: 'white', 
-                      outline: 'none', 
-                      flex: 1,
-                      fontFamily: "'Courier New', Courier, monospace",
-                      fontSize: '0.9rem'
-                    }} 
-                  />
-                </form>
-              )}
             </div>
           </div>
         </div>
