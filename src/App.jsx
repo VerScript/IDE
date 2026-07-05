@@ -4,14 +4,14 @@ import Editor from '@monaco-editor/react';
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ─── Backend URL ──────────────────────────────────────────────────
-const VS_SHARP_API = 'https://vs-sharp.onrender.com';
+const VS_SHARP_API = 'https://verscript-polyserver.onrender.com/vs-sharp';
 
 function App() {
   const [code, setCode] = useState(
     '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name'
   );
   const [output, setOutput] = useState([
-    { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by vs-sharp.onrender.com' },
+    { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by verscript-polyserver.onrender.com' },
     { type: 'success', text: 'Ready. Press ▶ Run Code to execute.' }
   ]);
   const [isRunning, setIsRunning] = useState(false);
@@ -152,7 +152,7 @@ function App() {
 
   const handleClearTerminal = () => {
     setOutput([
-      { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by vs-sharp.onrender.com' },
+      { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by verscript-polyserver.onrender.com' },
       { type: 'success', text: 'Terminal cleared.' }
     ]);
   };
