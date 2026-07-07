@@ -314,3 +314,36 @@ body {
 .terminal-line.success { color: var(--primary); }
 .terminal-line.error { color: #FF4444; }
 .terminal-line.cmd { color: #FFFFFF; font-weight: bold; }
+
+/* Responsive adjustments for mobile-friendly view */
+@media (max-width: 768px) {
+  .ide-header {
+    height: auto;
+    flex-direction: column;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-bottom: 10px;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .ai-panel {
+    width: 100%;
+  }
+
+  .terminal-panel {
+    height: 30vh;
+  }
+
+  .btn {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+}
