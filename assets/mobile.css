@@ -25,19 +25,23 @@
     /* Header: shrink padding, wrap actions */
     .ide-header {
         height: auto !important;
-        padding: 10px 14px !important;
+        padding: 8px 10px !important;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 10px;
+        justify-content: space-between;
     }
     .logo-text { font-size: 1rem !important; }
 
     .header-actions {
         gap: 8px !important;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        width: 100%;
+        overflow-x: auto;
     }
     .btn {
-        padding: 6px 12px !important;
+        padding: 6px 12px !important; flex: 1; text-align: center; justify-content: center;
         font-size: 0.8rem !important;
+        white-space: nowrap;
     }
 
     /* IDE body: stack vertically */
