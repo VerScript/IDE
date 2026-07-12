@@ -6,6 +6,85 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // ─── Backend URL ──────────────────────────────────────────────────
 const VS_SHARP_API = 'https://verscript-polyserver.onrender.com/vs-sharp';
 
+const handleEditorWillMount = (monaco) => {
+  const languages = monaco.languages.getLanguages();
+  if (languages.some(lang => lang.id === 'verscript')) return;
+
+  monaco.languages.register({ id: 'verscript' });
+
+  monaco.languages.setMonarchTokensProvider('verscript', {
+    tokenizer: {
+      root: [
+        [/[a-zA-Z_]\w*/, {
+          cases: {
+            'display': 'keyword',
+            'prompt': 'keyword',
+            'true': 'keyword',
+            'false': 'keyword',
+            'loop': 'keyword',
+            'iterate': 'keyword',
+            'from': 'keyword',
+            'to': 'keyword',
+            '@default': 'identifier'
+          }
+        }],
+        [/[0-9]+/, 'number'],
+        [/"([^"\\]|\\.)*"/, 'string'],
+        [/![^\n]*/, 'comment'],
+        [/[+\-*/:]/, 'operators']
+      ]
+    }
+  });
+
+  monaco.languages.registerCompletionItemProvider('verscript', {
+    provideCompletionItems: (model, position) => {
+      const suggestions = [
+        {
+          label: 'display',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'display ${1:expression}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Print value to stdout'
+        },
+        {
+          label: 'prompt',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'prompt ${1:variable}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Read value from stdin'
+        },
+        {
+          label: 'true',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'true',
+          detail: 'Boolean true'
+        },
+        {
+          label: 'false',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'false',
+          detail: 'Boolean false'
+        },
+        {
+          label: 'loop',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'loop ${1:n}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Repeat n times'
+        },
+        {
+          label: 'iterate',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'iterate ${1:i} from ${2:x} to ${3:y}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Iterate i from x to y'
+        }
+      ];
+      return { suggestions };
+    }
+  });
+};
+
 function App() {
   const [code, setCode] = useState(
     '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name'
@@ -224,7 +303,8 @@ function App() {
           <div className="editor-wrapper">
             <Editor
               height="100%"
-              defaultLanguage="javascript"
+              language="verscript"
+              beforeMount={handleEditorWillMount}
               theme="vs-dark"
               value={code}
               onChange={(value) => {
