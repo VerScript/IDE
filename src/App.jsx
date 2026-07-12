@@ -25,13 +25,18 @@ const handleEditorWillMount = (monaco) => {
             'iterate': 'keyword',
             'from': 'keyword',
             'to': 'keyword',
+            'if': 'keyword',
+            'then': 'keyword',
+            'else': 'keyword',
+            'while': 'keyword',
+            'until': 'keyword',
             '@default': 'identifier'
           }
         }],
         [/[0-9]+/, 'number'],
         [/"([^"\\]|\\.)*"/, 'string'],
         [/![^\n]*/, 'comment'],
-        [/[+\-*/:]/, 'operators']
+        [/[+\-*/:=><]|x=/, 'operators']
       ]
     }
   });
@@ -78,6 +83,41 @@ const handleEditorWillMount = (monaco) => {
           insertText: 'iterate ${1:i} from ${2:x} to ${3:y}\n\t$0',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: 'Iterate i from x to y'
+        },
+        {
+          label: 'if',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'if ${1:condition} then\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'If statement'
+        },
+        {
+          label: 'else if',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'else if ${1:condition} then\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Else If statement'
+        },
+        {
+          label: 'else',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'else\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Else statement'
+        },
+        {
+          label: 'while',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'while ${1:condition}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'While loop'
+        },
+        {
+          label: 'until',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'until ${1:condition}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Until loop'
         }
       ];
       return { suggestions };
