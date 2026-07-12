@@ -86,6 +86,14 @@ const handleEditorWillMount = (monaco) => {
 };
 
 function App() {
+  const [files, setFiles] = useState([
+    { name: 'test.vrs', content: '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name' },
+    { name: 'loops.vrs', content: '! Testing Loops\niterate i from 1 to 5\n  display i' }
+  ]);
+  const [activeFileName, setActiveFileName] = useState('test.vrs');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [newFileName, setNewFileName] = useState('');
+
   const [code, setCode] = useState(
     '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name'
   );
@@ -105,6 +113,54 @@ function App() {
   const isAnimatingRef = useRef(false);
   const terminalRef = useRef(null);
   const chatRef = useRef(null);
+
+  const handleSelectFile = (fileName) => {
+    if (isAnimatingRef.current) return;
+    setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: code } : f));
+    const selected = files.find(f => f.name === fileName);
+    if (selected) {
+      setActiveFileName(fileName);
+      setCode(selected.content);
+    }
+  };
+
+  const handleAddFile = (e) => {
+    e.preventDefault();
+    let name = newFileName.trim();
+    if (!name) return;
+    if (!name.endsWith('.vrs')) {
+      name += '.vrs';
+    }
+    if (files.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+      alert('A file with this name already exists!');
+      return;
+    }
+    const newFiles = files.map(f => f.name === activeFileName ? { ...f, content: code } : f);
+    const newFile = { name, content: `! VerScript ${name}\n` };
+    setFiles([...newFiles, newFile]);
+    setActiveFileName(name);
+    setCode(newFile.content);
+    setNewFileName('');
+  };
+
+  const handleDeleteFile = (fileName, e) => {
+    e.stopPropagation();
+    if (files.length <= 1) {
+      alert('Cannot delete the last remaining file.');
+      return;
+    }
+    const confirmed = window.confirm(`Are you sure you want to delete "${fileName}"?`);
+    if (!confirmed) return;
+
+    const remaining = files.filter(f => f.name !== fileName);
+    setFiles(remaining);
+
+    if (activeFileName === fileName) {
+      const nextActive = remaining[0].name;
+      setActiveFileName(nextActive);
+      setCode(remaining[0].content);
+    }
+  };
 
   // Auto-scroll terminal and chat
   useEffect(() => {
@@ -146,6 +202,7 @@ function App() {
 
     isAnimatingRef.current = false;
     setIsAnimating(false);
+    setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: targetCode } : f));
   };
 
   // ─── VS# Chat Submit ─────────────────────────────────────────────
@@ -283,21 +340,66 @@ function App() {
         {/* ── Sidebar ── */}
         <div className="sidebar">
           <div className="sidebar-header">Explorer</div>
+          <div className="search-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <form className="add-file-container" onSubmit={handleAddFile}>
+            <input
+              type="text"
+              className="add-file-input"
+              placeholder="New file.vrs..."
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+            />
+            <button type="submit" className="btn-add-file">+</button>
+          </form>
           <ul className="file-list">
-            <li className="file-item active">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                <polyline points="13 2 13 9 20 9"></polyline>
-              </svg>
-              test.vrs
-            </li>
+            {files
+              .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map(file => (
+                <li
+                  key={file.name}
+                  className={`file-item ${activeFileName === file.name ? 'active' : ''}`}
+                  onClick={() => handleSelectFile(file.name)}
+                >
+                  <img
+                    src="https://github.com/VerScript.png"
+                    alt="vrs"
+                    style={{ width: '16px', height: '16px', borderRadius: '3px', marginRight: '6px' }}
+                  />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {file.name}
+                  </span>
+                  <button
+                    className="btn-delete-file"
+                    onClick={(e) => handleDeleteFile(file.name, e)}
+                    title="Delete file"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
           </ul>
         </div>
 
         {/* ── Editor Area ── */}
         <div className="editor-container">
           <div className="editor-tabs">
-            <div className="editor-tab active">test.vrs</div>
+            {files.map(file => (
+              <div
+                key={file.name}
+                className={`editor-tab ${activeFileName === file.name ? 'active' : ''}`}
+                onClick={() => handleSelectFile(file.name)}
+              >
+                {file.name}
+              </div>
+            ))}
           </div>
 
           <div className="editor-wrapper">
@@ -308,7 +410,11 @@ function App() {
               theme="vs-dark"
               value={code}
               onChange={(value) => {
-                if (!isAnimatingRef.current) setCode(value || '');
+                if (!isAnimatingRef.current) {
+                  const val = value || '';
+                  setCode(val);
+                  setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: val } : f));
+                }
               }}
               options={{
                 minimap: { enabled: false },

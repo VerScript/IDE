@@ -347,3 +347,90 @@ body {
     padding: 6px 12px;
   }
 }
+
+/* Custom File Explorer Controls */
+.search-container {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--primary);
+}
+
+.add-file-container {
+  padding: 10px;
+  display: flex;
+  gap: 5px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.add-file-input {
+  flex: 1;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-main);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.add-file-input:focus {
+  border-color: var(--primary);
+}
+
+.btn-add-file {
+  background: rgba(0, 255, 204, 0.15);
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  color: var(--primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-add-file:hover {
+  background: rgba(0, 255, 204, 0.25);
+  border-color: var(--primary);
+}
+
+.file-item {
+  position: relative;
+}
+
+.btn-delete-file {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  display: none;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.file-item:hover .btn-delete-file {
+  display: block;
+}
+
+.btn-delete-file:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
