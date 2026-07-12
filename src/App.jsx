@@ -133,6 +133,7 @@ function App() {
   const [activeFileName, setActiveFileName] = useState('test.vrs');
   const [searchQuery, setSearchQuery] = useState('');
   const [newFileName, setNewFileName] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [code, setCode] = useState(
     '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name'
@@ -162,6 +163,7 @@ function App() {
       setActiveFileName(fileName);
       setCode(selected.content);
     }
+    setIsSidebarOpen(false);
   };
 
   const handleAddFile = (e) => {
@@ -338,6 +340,14 @@ function App() {
       {/* ── Header ── */}
       <div className="ide-header">
         <div className="logo-container">
+          <button
+            className="btn btn-sidebar-toggle"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title="Toggle File Explorer"
+            style={{ marginRight: '10px' }}
+          >
+            📂 Explorer
+          </button>
           <div className="logo-text">VerScript IDE</div>
         </div>
         <div className="header-actions">
@@ -378,8 +388,11 @@ function App() {
 
       <div className="ide-body">
         {/* ── Sidebar ── */}
-        <div className="sidebar">
-          <div className="sidebar-header">Explorer</div>
+        <div className={`sidebar ${isSidebarOpen ? 'open-mobile' : ''}`}>
+          <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Explorer</span>
+            <button className="btn-close-sidebar-mobile" onClick={() => setIsSidebarOpen(false)}>✕</button>
+          </div>
           <div className="search-container">
             <input
               type="text"
