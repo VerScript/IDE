@@ -42,7 +42,7 @@ const handleEditorWillMount = (monaco) => {
   });
 
   monaco.languages.registerCompletionItemProvider('verscript', {
-    provideCompletionItems: (model, position) => {
+    provideCompletionItems: (_model, _position) => {
       const suggestions = [
         {
           label: 'display',
