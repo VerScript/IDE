@@ -30,6 +30,11 @@ const handleEditorWillMount = (monaco) => {
             'else': 'keyword',
             'while': 'keyword',
             'until': 'keyword',
+            'do': 'keyword',
+            'unless': 'keyword',
+            'internal': 'keyword',
+            'external': 'keyword',
+            'error': 'keyword',
             '@default': 'identifier'
           }
         }],
@@ -118,6 +123,52 @@ const handleEditorWillMount = (monaco) => {
           insertText: 'until ${1:condition}\n\t$0',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: 'Until loop'
+        },
+        {
+          label: 'do',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'do\n\t$0\nunless ${1:error}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Try-Unless block'
+        },
+        {
+          label: 'unless',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'unless ${1:condition}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Unless handler'
+        },
+        {
+          label: 'unless internal',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'unless internal ${1:condition}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Unless internal condition watch'
+        },
+        {
+          label: 'unless external',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'unless external ${1:condition}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Unless external condition block'
+        },
+        {
+          label: 'internal',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'internal',
+          detail: 'Internal modifier keyword'
+        },
+        {
+          label: 'external',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'external',
+          detail: 'External modifier keyword'
+        },
+        {
+          label: 'error',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'error',
+          detail: 'Caught error keyword symbol'
         }
       ];
       return { suggestions };
@@ -125,19 +176,42 @@ const handleEditorWillMount = (monaco) => {
   });
 };
 
+const defaultSampleCode = `! Welcome to VerScript
+! Features: Loops, Conditionals, and Exception Handling
+
+display "--- 1. Loop and Iteration Showcase ---"
+iterate idx from 1 to 5
+  display "Iteration: " + idx
+
+display "--- 2. Reactive 'unless internal' Watch ---"
+finished : false
+counter : 1
+do
+  display "counter: " + counter
+  if counter = 3 then
+    finished : true
+  counter : counter + 1
+unless internal finished
+  display "Terminated early since finished became true!"
+
+display "--- 3. Exception Handling with 'error' keyword ---"
+do
+  display "Attempting division by zero..."
+  val : 100 / 0
+unless DivisionByZeroError
+  display "Exception caught safely: " + error`;
+
 function App() {
   const [files, setFiles] = useState([
-    { name: 'test.vrs', content: '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name' },
+    { name: 'sample.vrs', content: defaultSampleCode },
     { name: 'loops.vrs', content: '! Testing Loops\niterate i from 1 to 5\n  display i' }
   ]);
-  const [activeFileName, setActiveFileName] = useState('test.vrs');
+  const [activeFileName, setActiveFileName] = useState('sample.vrs');
   const [searchQuery, setSearchQuery] = useState('');
   const [newFileName, setNewFileName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const [code, setCode] = useState(
-    '! Welcome to VerScript IDE\n! Try: display "Hello World"\n\nname : "World"\ndisplay "Hello "\ndisplay name'
-  );
+  const [code, setCode] = useState(defaultSampleCode);
   const [output, setOutput] = useState([
     { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by verscript-polyserver.onrender.com' },
     { type: 'success', text: 'Ready. Press ▶ Run Code to execute.' }
