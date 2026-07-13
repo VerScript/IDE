@@ -35,6 +35,10 @@ const handleEditorWillMount = (monaco) => {
             'internal': 'keyword',
             'external': 'keyword',
             'error': 'keyword',
+            'ForceErrors': 'keyword',
+            'CriticalErrors': 'keyword',
+            'SuppressErrors': 'keyword',
+            'throw': 'keyword',
             '@default': 'identifier'
           }
         }],
@@ -169,6 +173,34 @@ const handleEditorWillMount = (monaco) => {
           kind: monaco.languages.CompletionItemKind.Keyword,
           insertText: 'error',
           detail: 'Caught error keyword symbol'
+        },
+        {
+          label: 'ForceErrors',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'ForceErrors\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Execute block forcing display of all errors'
+        },
+        {
+          label: 'CriticalErrors',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'CriticalErrors\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Execute block throwing critical errors only'
+        },
+        {
+          label: 'SuppressErrors',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'SuppressErrors\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Execute block skipping all errors'
+        },
+        {
+          label: 'throw',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'throw ${1:ErrorName}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Throw registered error or active error'
         }
       ];
       return { suggestions };
@@ -177,29 +209,24 @@ const handleEditorWillMount = (monaco) => {
 };
 
 const defaultSampleCode = `! Welcome to VerScript
-! Features: Loops, Conditionals, and Exception Handling
+! Showcase: System Operators, Custom Throws, and Watches
 
 display "--- 1. Loop and Iteration Showcase ---"
 iterate idx from 1 to 5
   display "Iteration: " + idx
 
-display "--- 2. Reactive 'unless internal' Watch ---"
-finished : false
-counter : 1
-do
-  display "counter: " + counter
-  if counter = 3 then
-    finished : true
-  counter : counter + 1
-unless internal finished
-  display "Terminated early since finished became true!"
+display "--- 2. SuppressErrors Block Operator ---"
+SuppressErrors
+  display "Running division by zero (skipped under SuppressErrors)..."
+  val : 10 / 0
+  display "Division by zero bypassed successfully!"
 
-display "--- 3. Exception Handling with 'error' keyword ---"
+display "--- 3. Custom Throw & Exception Catching ---"
 do
-  display "Attempting division by zero..."
-  val : 100 / 0
+  display "Throwing custom DivisionByZeroError..."
+  throw DivisionByZeroError
 unless DivisionByZeroError
-  display "Exception caught safely: " + error`;
+  display "Safe exception catch of: " + error`;
 
 function App() {
   const [files, setFiles] = useState([
