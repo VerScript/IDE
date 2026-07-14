@@ -230,10 +230,162 @@ unless DivisionByZeroError
 
 function App() {
   const [files, setFiles] = useState([
-    { name: 'sample.vrs', content: defaultSampleCode },
-    { name: 'loops.vrs', content: '! Testing Loops\niterate i from 1 to 5\n  display i' }
+    { name: 'sample.vrs', content: defaultSampleCode }
   ]);
   const [activeFileName, setActiveFileName] = useState('sample.vrs');
+  const [contextMenu, setContextMenu] = useState(null);
+  const [decorationsList, setDecorationsList] = useState([]);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+
+  useEffect(() => {
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
+
+  const formatCode = (rawCode) => {
+    const lines = rawCode.split('\n');
+    let currentIndent = 0;
+    return lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      const isDeIndentKeyword = /^(else|unless)(\s|$)/.test(trimmed);
+      let actualIndent = currentIndent;
+      if (isDeIndentKeyword && currentIndent > 0) {
+        actualIndent = currentIndent - 1;
+      }
+      const spaces = '  '.repeat(actualIndent);
+      const isBlockStart = /^(loop|iterate|if|while|until|do|ForceErrors|CriticalErrors|SuppressErrors|else|unless)(\s|$)/.test(trimmed);
+      if (isBlockStart) {
+        currentIndent = actualIndent + 1;
+      }
+      return spaces + trimmed;
+    }).join('\n');
+  };
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      show: true
+    });
+  };
+
+  const triggerAutoIndent = () => {
+    const formatted = formatCode(code);
+    setCode(formatted);
+    setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: formatted } : f));
+  };
+
+  const handleHighlight = (color) => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const selection = editorRef.current.getSelection();
+    if (selection.isEmpty()) {
+      alert("Please select some text first to highlight!");
+      return;
+    }
+    
+    const className = `hl-${Math.random().toString(36).substring(2, 9)}`;
+    const style = document.createElement('style');
+    style.innerHTML = `.${className} { background-color: ${color} !important; color: #000 !important; font-weight: bold !important; }`;
+    document.head.appendChild(style);
+    
+    const newDec = {
+      range: new monacoRef.current.Range(
+        selection.startLineNumber,
+        selection.startColumn,
+        selection.endLineNumber,
+        selection.endColumn
+      ),
+      options: {
+        inlineClassName: className
+      }
+    };
+    
+    const ids = editorRef.current.deltaDecorations([], [newDec]);
+    setDecorationsList(prev => [...prev, { ids, className }]);
+  };
+
+  const clearAllHighlights = () => {
+    if (!editorRef.current) return;
+    decorationsList.forEach(dec => {
+      editorRef.current.deltaDecorations(dec.ids, []);
+    });
+    setDecorationsList([]);
+  };
+
+  const addDescriptionComments = async () => {
+    if (!editorRef.current) return;
+    const selection = editorRef.current.getSelection();
+    const selectedText = editorRef.current.getModel().getValueInRange(selection);
+    const textToComment = selectedText.trim() ? selectedText : code;
+    
+    setIsAiOpen(true);
+    setChatMessages(prev => [...prev, { type: 'user', text: 'Generate description comments.' }]);
+    setChatMessages(prev => [...prev, { type: 'system', text: '⏳ VS# is generating line comments...' }]);
+    
+    try {
+      const res = await fetch(`${VS_SHARP_API}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: textToComment, message: "add description comments" })
+      });
+      const data = await res.json();
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { type: 'system', text: data.response || "Done adding comments." }
+      ]);
+      if (data.action && data.action.type === 'edit') {
+        if (selectedText.trim()) {
+          const range = new monacoRef.current.Range(
+            selection.startLineNumber,
+            selection.startColumn,
+            selection.endLineNumber,
+            selection.endColumn
+          );
+          editorRef.current.executeEdits("my-source", [
+            { range, text: data.action.code, forceMoveMarkers: true }
+          ]);
+        } else {
+          await animateTextTransition(code, data.action.code);
+        }
+      }
+    } catch (err) {
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { type: 'system', text: `⚠️ Error adding comments: ${err.message}` }
+      ]);
+    }
+  };
+
+  const removeSyntaxErrors = async () => {
+    setIsAiOpen(true);
+    setChatMessages(prev => [...prev, { type: 'user', text: 'Remove errors from code.' }]);
+    setChatMessages(prev => [...prev, { type: 'system', text: '⏳ VS# is fixing syntax errors...' }]);
+    
+    try {
+      const res = await fetch(`${VS_SHARP_API}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, message: "remove syntax errors" })
+      });
+      const data = await res.json();
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { type: 'system', text: data.response || "Errors removed." }
+      ]);
+      if (data.action && data.action.type === 'edit') {
+        await animateTextTransition(code, data.action.code);
+      }
+    } catch (err) {
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { type: 'system', text: `⚠️ Error fixing code: ${err.message}` }
+      ]);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [newFileName, setNewFileName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -556,7 +708,7 @@ function App() {
             ))}
           </div>
 
-          <div className="editor-wrapper">
+          <div className="editor-wrapper" onContextMenu={handleContextMenu}>
             <Editor
               height="100%"
               language="verscript"
