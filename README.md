@@ -1,2 +1,2 @@
-###VerScript Web IDE
+### VerScript Web IDE
 The Web IDE for VerScript
