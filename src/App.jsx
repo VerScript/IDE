@@ -39,6 +39,7 @@ const handleEditorWillMount = (monaco) => {
             'CriticalErrors': 'keyword',
             'SuppressErrors': 'keyword',
             'throw': 'keyword',
+            'step': 'keyword',
             '@default': 'identifier'
           }
         }],
@@ -201,6 +202,13 @@ const handleEditorWillMount = (monaco) => {
           insertText: 'throw ${1:ErrorName}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: 'Throw registered error or active error'
+        },
+        {
+          label: 'step',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'step ${1:2}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Step increment for loops'
         }
       ];
       return { suggestions };
@@ -209,11 +217,11 @@ const handleEditorWillMount = (monaco) => {
 };
 
 const defaultSampleCode = `! Welcome to VerScript
-! Showcase: System Operators, Custom Throws, and Watches
+! Showcase: Loops with Step, System Operators, Custom Throws, and Exception Handling
 
-display "--- 1. Loop and Iteration Showcase ---"
-iterate idx from 1 to 5
-  display "Iteration: " + idx
+display "--- 1. Loop and Iteration with Step Showcase ---"
+iterate idx from 1 to 10 step 2
+  display "Stepped Iteration: " + idx
 
 display "--- 2. SuppressErrors Block Operator ---"
 SuppressErrors
