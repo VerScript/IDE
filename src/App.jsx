@@ -12,6 +12,59 @@ const handleEditorWillMount = (monaco) => {
 
   monaco.languages.register({ id: 'verscript' });
 
+  monaco.editor.defineTheme('cyberpunk', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: '00FFCC', fontStyle: 'bold' },
+      { token: 'string', foreground: 'FF79C6' },
+      { token: 'number', foreground: 'BD93F9' },
+      { token: 'comment', foreground: '6272A4', fontStyle: 'italic' },
+      { token: 'operators', foreground: 'FFB86C' }
+    ],
+    colors: { 'editor.background': '#09090b' }
+  });
+
+  monaco.editor.defineTheme('monokai', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: 'F92672', fontStyle: 'bold' },
+      { token: 'string', foreground: 'E6DB74' },
+      { token: 'number', foreground: 'AE81FF' },
+      { token: 'comment', foreground: '75715E', fontStyle: 'italic' },
+      { token: 'operators', foreground: 'F92672' }
+    ],
+    colors: { 'editor.background': '#272822' }
+  });
+
+  monaco.editor.defineTheme('solarized', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: '859900', fontStyle: 'bold' },
+      { token: 'string', foreground: '2AA198' },
+      { token: 'number', foreground: 'D33682' },
+      { token: 'comment', foreground: '586E75', fontStyle: 'italic' },
+      { token: 'operators', foreground: 'CB4B16' }
+    ],
+    colors: { 'editor.background': '#002B36' }
+  });
+
+  monaco.editor.defineTheme('light', {
+    base: 'vs',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: '2563EB', fontStyle: 'bold' },
+      { token: 'string', foreground: '059669' },
+      { token: 'number', foreground: '7C3AED' },
+      { token: 'comment', foreground: '94A3B8', fontStyle: 'italic' },
+      { token: 'operators', foreground: 'DC2626' }
+    ],
+    colors: { 'editor.background': '#F8FAFC' }
+  });
+
+
   monaco.languages.setMonarchTokensProvider('verscript', {
     tokenizer: {
       root: [
@@ -216,6 +269,54 @@ const handleEditorWillMount = (monaco) => {
   });
 };
 
+
+const TEMPLATES = {
+  stepped_loops: `! Template: Stepped Loops & Iterations
+display "--- Stepped Iteration ---"
+iterate i from 1 to 10 step 2
+  display "Iteration: " + i
+
+display "--- Stepped While Loop ---"
+count : 0
+while count < 9 step 3
+  display "Count: " + count
+  count : count + 1`,
+
+  do_unless: `! Template: Do-Unless Exception Catching & Watches
+display "--- Exception Handling ---"
+do
+  display "Trying division by zero..."
+  val : 10 / 0
+unless DivisionByZeroError
+  display "Caught error: " + error
+
+display "--- Internal Watch ---"
+flag : false
+do
+  display "Step 1 executes"
+  flag : true
+  display "Step 2 does not execute"
+unless internal flag
+  display "Reactive watch triggered!"`,
+
+  system_operators: `! Template: System Operators & Throws
+display "--- SuppressErrors Scope ---"
+SuppressErrors
+  val : 10 / 0
+  display "Error suppressed successfully!"
+
+display "--- Custom Throw ---"
+do
+  throw CustomError
+unless CustomError
+  display "Custom exception caught!"`,
+
+  prompt_math: `! Template: Interactive Input & Arithmetic
+display "Enter a number: "
+prompt num
+display "Calculated square: " + (num * num)`
+};
+
 const defaultSampleCode = `! Welcome to VerScript
 ! Showcase: Loops with Step, System Operators, Custom Throws, and Exception Handling
 
@@ -244,6 +345,158 @@ function App() {
   const [contextMenu, setContextMenu] = useState(null);
   const [decorationsList, setDecorationsList] = useState([]);
   const editorRef = useRef(null);
+
+  const [theme, setTheme] = useState('cyberpunk');
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [debugStepIndex, setDebugStepIndex] = useState(0);
+  const [debugVariables, setDebugVariables] = useState({});
+  const [debugDecorations, setDebugDecorations] = useState([]);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlCode = params.get('code');
+      if (urlCode) {
+        const decoded = decodeURIComponent(atob(urlCode));
+        if (decoded && decoded.trim()) {
+          setCode(decoded);
+          setFiles([{ name: 'shared.vrs', content: decoded }]);
+          setActiveFileName('shared.vrs');
+        }
+      }
+    } catch (e) {
+      console.error("Error reading shared URL code", e);
+    }
+  }, []);
+
+  const handleShareCode = () => {
+    try {
+      const encoded = btoa(encodeURIComponent(code));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
+      navigator.clipboard?.writeText(shareUrl);
+      alert("🔗 Shareable code link copied to clipboard!\n\n" + shareUrl);
+    } catch (e) {
+      alert("Error sharing code: " + e.message);
+    }
+  };
+
+  const handleSelectTemplate = (templateKey) => {
+    if (!templateKey) return;
+    const content = TEMPLATES[templateKey];
+    if (!content) return;
+    const fileName = `${templateKey}.vrs`;
+    setFiles(prev => {
+      const exists = prev.find(f => f.name === fileName);
+      if (exists) return prev.map(f => f.name === fileName ? { ...f, content } : f);
+      return [...prev, { name: fileName, content }];
+    });
+    setActiveFileName(fileName);
+    setCode(content);
+  };
+
+  const getExecutableLines = (rawCode) => {
+    const lines = rawCode.split('\n');
+    const result = [];
+    lines.forEach((lineText, idx) => {
+      const trimmed = lineText.trim();
+      if (trimmed && !trimmed.startsWith('!')) {
+        result.push({ lineNum: idx + 1, text: trimmed, original: lineText });
+      }
+    });
+    return result;
+  };
+
+  const startDebugger = () => {
+    const execLines = getExecutableLines(code);
+    if (execLines.length === 0) {
+      alert("No executable code lines found!");
+      return;
+    }
+    setIsDebugMode(true);
+    setDebugStepIndex(0);
+    setDebugVariables({});
+    setOutput(prev => [...prev, { type: 'cmd', text: '🐞 Debugger started. Click "Next Step" to advance.' }]);
+    highlightDebugLine(execLines[0].lineNum);
+  };
+
+  const stopDebugger = () => {
+    setIsDebugMode(false);
+    setDebugStepIndex(0);
+    setDebugVariables({});
+    if (editorRef.current && monacoRef.current) {
+      editorRef.current.deltaDecorations(debugDecorations, []);
+    }
+    setDebugDecorations([]);
+    setOutput(prev => [...prev, { type: 'cmd', text: '⏹️ Debugger stopped.' }]);
+  };
+
+  const highlightDebugLine = (lineNum) => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const newDec = {
+      range: new monacoRef.current.Range(lineNum, 1, lineNum, 1),
+      options: {
+        isWholeLine: true,
+        className: 'debug-active-line',
+        glyphMarginClassName: 'debug-active-glyph'
+      }
+    };
+    const ids = editorRef.current.deltaDecorations(debugDecorations, [newDec]);
+    setDebugDecorations(ids);
+    editorRef.current.revealLineInCenter(lineNum);
+  };
+
+  const stepNextLine = () => {
+    const execLines = getExecutableLines(code);
+    if (debugStepIndex >= execLines.length) {
+      setOutput(prev => [...prev, { type: 'success', text: '✅ Debugger reached end of program.' }]);
+      stopDebugger();
+      return;
+    }
+
+    const currentExec = execLines[debugStepIndex];
+    const lineText = currentExec.text;
+
+    if (lineText.startsWith('display ')) {
+      const expr = lineText.replace('display ', '').trim();
+      let outputVal = expr;
+      Object.keys(debugVariables).forEach(varName => {
+        const regex = new RegExp(`\\b${varName}\\b`, 'g');
+        outputVal = outputVal.replace(regex, JSON.stringify(debugVariables[varName].value));
+      });
+      outputVal = outputVal.replace(/^"|"$/g, '');
+      setOutput(prev => [...prev, { type: 'success', text: `[Line ${currentExec.lineNum}] ${outputVal}` }]);
+    } 
+    else if (lineText.includes(':')) {
+      const parts = lineText.split(':');
+      const varName = parts[0].trim();
+      let rawVal = parts[1].trim();
+      let type = 'int';
+      let parsedVal = parseInt(rawVal);
+      if (isNaN(parsedVal)) {
+        if (rawVal === 'true' || rawVal === 'false') {
+          type = 'boolean';
+          parsedVal = rawVal === 'true';
+        } else {
+          type = 'string';
+          parsedVal = rawVal.replace(/^"|"$/g, '');
+        }
+      }
+      setDebugVariables(prev => ({
+        ...prev,
+        [varName]: { name: varName, value: parsedVal, type }
+      }));
+      setOutput(prev => [...prev, { type: 'cmd', text: `[Line ${currentExec.lineNum}] Scope update: ${varName} = ${parsedVal}` }]);
+    }
+
+    const nextIndex = debugStepIndex + 1;
+    setDebugStepIndex(nextIndex);
+    if (nextIndex < execLines.length) {
+      highlightDebugLine(execLines[nextIndex].lineNum);
+    } else {
+      highlightDebugLine(currentExec.lineNum);
+    }
+  };
+
   const monacoRef = useRef(null);
 
   useEffect(() => {
@@ -597,7 +850,7 @@ function App() {
   };
 
   return (
-    <div className="ide-container">
+    <div className={`ide-container theme-${theme}`}>
       {/* ── Header ── */}
       <div className="ide-header">
         <div className="logo-container">
@@ -717,11 +970,19 @@ function App() {
           </div>
 
           <div className="editor-wrapper" onContextMenu={handleContextMenu}>
+            {isDebugMode && (
+              <div className="debug-bar">
+                <span>🐞 <strong>Debugger Active</strong></span>
+                <button className="btn" onClick={stepNextLine}>⏭️ Next Step</button>
+                <button className="btn" onClick={startDebugger}>🔄 Restart</button>
+                <button className="btn" onClick={stopDebugger}>⏹️ Exit</button>
+              </div>
+            )}
             <Editor
               height="100%"
               language="verscript"
               beforeMount={handleEditorWillMount}
-              theme="vs-dark"
+              theme={theme}
               value={code}
               onChange={(value) => {
                 if (!isAnimatingRef.current) {
