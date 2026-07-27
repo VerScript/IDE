@@ -883,10 +883,33 @@ function App() {
           >
             📖 Docs
           </a>
-          <button id="btnShare" className="btn" onClick={() => {
-            navigator.clipboard?.writeText(code);
-          }} title="Copy code to clipboard">
-            📋 Copy
+
+          <select
+            className="btn"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            style={{ padding: '4px 8px', borderRadius: '4px' }}
+          >
+            <option value="cyberpunk">Cyberpunk Theme</option>
+            <option value="monokai">Monokai Theme</option>
+            <option value="solarized">Solarized Theme</option>
+            <option value="light">Light Theme</option>
+          </select>
+
+          <select
+            className="btn"
+            onChange={(e) => handleSelectTemplate(e.target.value)}
+            defaultValue=""
+            style={{ padding: '4px 8px', borderRadius: '4px' }}
+          >
+            <option value="" disabled>Select Template...</option>
+            {Object.keys(TEMPLATES).map(key => (
+              <option key={key} value={key}>{key}</option>
+            ))}
+          </select>
+
+          <button id="btnShare" className="btn" onClick={handleShareCode} title="Share code">
+            🔗 Share
           </button>
           <button
             id="btnRun"
@@ -970,6 +993,35 @@ function App() {
           </div>
 
           <div className="editor-wrapper" onContextMenu={handleContextMenu}>
+            {contextMenu?.show && (
+              <div
+                className="custom-context-menu"
+                style={{ top: contextMenu.y, left: contextMenu.x }}
+                onMouseLeave={() => setContextMenu(null)}
+              >
+                <div className="context-menu-item" onClick={() => { triggerAutoIndent(); setContextMenu(null); }}>
+                  ✨ Auto-Indent
+                </div>
+                <div className="context-menu-divider" />
+                <div className="context-menu-item" onClick={() => { handleHighlight('yellow'); setContextMenu(null); }}>
+                  🖍️ Highlight Yellow
+                </div>
+                <div className="context-menu-item" onClick={() => { handleHighlight('cyan'); setContextMenu(null); }}>
+                  🖍️ Highlight Cyan
+                </div>
+                <div className="context-menu-item" onClick={() => { clearAllHighlights(); setContextMenu(null); }}>
+                  🧹 Clear Highlights
+                </div>
+                <div className="context-menu-divider" />
+                <div className="context-menu-item" onClick={() => { addDescriptionComments(); setContextMenu(null); }}>
+                  📝 Add AI Comments
+                </div>
+                <div className="context-menu-item" onClick={() => { removeSyntaxErrors(); setContextMenu(null); }}>
+                  🔧 Fix Syntax Errors
+                </div>
+              </div>
+            )}
+
             {isDebugMode && (
               <div className="debug-bar">
                 <span>🐞 <strong>Debugger Active</strong></span>
