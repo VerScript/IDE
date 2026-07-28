@@ -339,8 +339,13 @@ unless DivisionByZeroError
 
 function App() {
   const [files, setFiles] = useState([
-    { name: 'sample.vrs', content: defaultSampleCode }
+    { name: 'sample.vrs', content: defaultSampleCode },
+    { name: 'src/main.vrs', content: "! Main script in src folder\ndisplay \"Running from src/main.vrs\"\n" },
+    { name: 'tests/test_step.vrs', content: "! Test step loop\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i\n" }
   ]);
+  const [folders, setFolders] = useState(['src', 'tests']);
+  const [collapsedFolders, setCollapsedFolders] = useState({});
+  const [targetFolder, setTargetFolder] = useState('');
   const [activeFileName, setActiveFileName] = useState('sample.vrs');
   const [contextMenu, setContextMenu] = useState(null);
   const [decorationsList, setDecorationsList] = useState([]);
@@ -680,6 +685,45 @@ function App() {
     setIsSidebarOpen(false);
   };
 
+  
+  const toggleFolder = (folderName) => {
+    setCollapsedFolders(prev => ({
+      ...prev,
+      [folderName]: !prev[folderName]
+    }));
+  };
+
+  const handleAddFolder = () => {
+    const name = window.prompt('Enter new folder name:');
+    if (!name || !name.trim()) return;
+    const cleanName = name.trim().replace(/\/+$|^\/+/g, '');
+    if (!cleanName) return;
+    if (folders.includes(cleanName)) {
+      alert('Folder already exists!');
+      return;
+    }
+    setFolders(prev => [...prev, cleanName]);
+  };
+
+  const handleDeleteFolder = (folderName, e) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(`Delete folder "${folderName}" and all files inside it?`);
+    if (!confirmed) return;
+
+    const remainingFiles = files.filter(f => !f.name.startsWith(folderName + '/'));
+    if (remainingFiles.length === 0) {
+      alert('Cannot delete folder: at least one file must remain in workspace.');
+      return;
+    }
+    setFiles(remainingFiles);
+    setFolders(prev => prev.filter(f => f !== folderName));
+
+    if (activeFileName.startsWith(folderName + '/')) {
+      setActiveFileName(remainingFiles[0].name);
+      setCode(remainingFiles[0].content);
+    }
+  };
+
   const handleAddFile = (e) => {
     e.preventDefault();
     let name = newFileName.trim();
@@ -802,7 +846,7 @@ function App() {
   const handleRun = async () => {
     if (isRunning) return;
     setIsRunning(true);
-    setOutput(prev => [...prev, { type: 'cmd', text: '> verscript test.vrs' }]);
+    setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${activeFileName}>` }]);
 
     try {
       const res = await fetch(`${VS_SHARP_API}/run`, {

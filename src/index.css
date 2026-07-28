@@ -631,3 +631,22 @@ body {
   background-clip: padding-box;
 }
 
+
+/* ─── FOLDER & EXPLORER TREE STYLES ─── */
+.folder-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.folder-files {
+  border-left: 1px dashed var(--border-color);
+  margin-left: 8px;
+}
+
+.explorer-tree::-webkit-scrollbar {
+  width: 6px;
+}
+
+.explorer-tree::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
