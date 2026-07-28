@@ -1034,6 +1034,10 @@ function App() {
               height="100%"
               language="verscript"
               beforeMount={handleEditorWillMount}
+              onMount={(editor, monaco) => {
+                editorRef.current = editor;
+                monacoRef.current = monaco;
+              }}
               theme={theme}
               value={code}
               onChange={(value) => {
