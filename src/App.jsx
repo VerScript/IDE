@@ -728,6 +728,9 @@ function App() {
     e.preventDefault();
     let name = newFileName.trim();
     if (!name) return;
+    if (targetFolder) {
+      name = `${targetFolder}/${name}`;
+    }
     if (!name.endsWith('.vrs')) {
       name += '.vrs';
     }
@@ -983,18 +986,39 @@ function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <form className="add-file-container" onSubmit={handleAddFile}>
-            <input
-              type="text"
+          <div style={{ padding: '0 10px', marginTop: '10px' }}>
+            <button className="btn" style={{ width: '100%', fontSize: '0.85rem' }} onClick={handleAddFolder}>
+              + New Folder
+            </button>
+          </div>
+          <form className="add-file-container" onSubmit={handleAddFile} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <select
               className="add-file-input"
-              placeholder="New file.vrs..."
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-            />
-            <button type="submit" className="btn-add-file">+</button>
+              value={targetFolder}
+              onChange={(e) => setTargetFolder(e.target.value)}
+              style={{ padding: '4px' }}
+            >
+              <option value="">Root (/)</option>
+              {folders.map(folder => (
+                <option key={folder} value={folder}>{folder}/</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', gap: '5px' }}>
+              <input
+                type="text"
+                className="add-file-input"
+                placeholder="New file.vrs..."
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button type="submit" className="btn-add-file">+</button>
+            </div>
           </form>
-          <ul className="file-list">
+          <ul className="file-list explorer-tree">
+            {/* Root Files */}
             {files
+              .filter(f => !f.name.includes('/'))
               .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
               .map(file => (
                 <li
@@ -1019,6 +1043,68 @@ function App() {
                   </button>
                 </li>
               ))}
+
+            {/* Folders */}
+            {folders.map(folder => {
+              const folderFiles = files.filter(f => f.name.startsWith(folder + '/'));
+              if (searchQuery && !folderFiles.some(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))) {
+                return null;
+              }
+
+              return (
+                <div key={folder} className="folder-container">
+                  <div
+                    className="folder-header file-item"
+                    onClick={() => toggleFolder(folder)}
+                    style={{ cursor: 'pointer', paddingLeft: '5px' }}
+                  >
+                    <span style={{ marginRight: '6px', fontSize: '0.8em' }}>
+                      {collapsedFolders[folder] ? '▶' : '▼'}
+                    </span>
+                    <span style={{ fontWeight: 'bold', color: '#BD93F9', flex: 1 }}>
+                      {folder}
+                    </span>
+                    <button
+                      className="btn-delete-file"
+                      onClick={(e) => handleDeleteFolder(folder, e)}
+                      title="Delete folder"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {!collapsedFolders[folder] && (
+                    <ul className="folder-files">
+                      {folderFiles
+                        .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map(file => (
+                          <li
+                            key={file.name}
+                            className={`file-item ${activeFileName === file.name ? 'active' : ''}`}
+                            onClick={() => handleSelectFile(file.name)}
+                          >
+                            <img
+                              src="https://github.com/VerScript.png"
+                              alt="vrs"
+                              style={{ width: '16px', height: '16px', borderRadius: '3px', marginRight: '6px' }}
+                            />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                              {file.name.replace(folder + '/', '')}
+                            </span>
+                            <button
+                              className="btn-delete-file"
+                              onClick={(e) => handleDeleteFile(file.name, e)}
+                              title="Delete file"
+                            >
+                              ✕
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
           </ul>
         </div>
 
