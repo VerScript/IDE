@@ -339,7 +339,7 @@ SuppressErrors
 const defaultSampleCode = `!!
   VerScript Showcase — v1.2.0
   Featuring:
-    1: Multiline Comments (!! ... !!) & Single-line Comments (!)
+    1: Multiline Comments and Single-line Comments
     2: Command Attributes (?color, ?newline=false, ?default, ?msg)
     3: Stepped Iteration & Loops (iterate i from x to y step z)
     4: Exception Handling (do ... unless) & Custom Throws
@@ -374,6 +374,50 @@ SuppressErrors
   display "Running invalid operation under SuppressErrors..." ?color="yellow"
   invalid_val : 10 / 0
   display "Division by zero bypassed cleanly!" ?color="green"`;
+
+
+// --- ANSI ESCAPE CODE RENDERER FOR TERMINAL ---
+function renderAnsiLine(text) {
+    if (!text) return null;
+    const colorMap = {
+        '31': '#ff5555',
+        '32': '#50fa7b',
+        '33': '#f1fa8c',
+        '34': '#bd93f9',
+        '35': '#ff79c6',
+        '36': '#8be9fd',
+        '0': null
+    };
+
+    const regex = /\033\[(\d+)m|\x1b\[(\d+)m/g;
+    const parts = [];
+    let lastIndex = 0;
+    let currentColor = null;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+        const matchIndex = match.index;
+        if (matchIndex > lastIndex) {
+            const segment = text.slice(lastIndex, matchIndex);
+            parts.push({ text: segment, color: currentColor });
+        }
+        const code = match[1] || match[2];
+        currentColor = colorMap[code] !== undefined ? colorMap[code] : currentColor;
+        lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        parts.push({ text: text.slice(lastIndex), color: currentColor });
+    }
+
+    if (parts.length === 0) return text;
+
+    return parts.map((p, idx) => (
+        <span key={idx} style={p.color ? { color: p.color, fontWeight: 'bold' } : {}}>
+            {p.text}
+        </span>
+    ));
+}
 
 function App() {
   const [files, setFiles] = useState([
