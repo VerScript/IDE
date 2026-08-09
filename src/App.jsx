@@ -271,77 +271,115 @@ const handleEditorWillMount = (monaco) => {
 
 
 const TEMPLATES = {
-  stepped_loops: `! Template: Stepped Loops & Iterations
-display "--- Stepped Iteration ---"
-iterate i from 1 to 10 step 2
-  display "Iteration: " + i
+  attributes_demo: `!!
+  Template: Command Attributes & Kwargs Showcase
+  Attributes customize output colors, inline printing, prompt defaults, and throw messages!
+!!
 
-display "--- Stepped While Loop ---"
+display "=== Colorized Terminal Output ===" ?color="cyan"
+display "Success Status!" ?color="green"
+display "Warning Notice!" ?color="yellow"
+display "Error Alert!" ?color="red"
+
+display "=== Inline Segmented Printing ===" ?color="purple"
+display "Segment 1, " ?newline=false ?color="cyan"
+display "Segment 2, " ?newline=false ?color="yellow"
+display "Segment 3 (Done!)" ?color="green"
+
+prompt username ?default="GuestUser"
+display "User registered: " + username ?color="green"`,
+
+  stepped_loops: `!!
+  Template: Stepped Loops & Iterations
+  Demonstrates loop step size overrides and attribute modifiers.
+!!
+
+display "--- Stepped Iteration ---" ?color="cyan"
+iterate i from 1 to 10 step 2
+  display "Stepped Iteration: " + i ?color="cyan"
+
+display "--- Stepped While Loop ---" ?color="purple"
 count : 0
 while count < 9 step 3
-  display "Count: " + count
+  display "Count Step: " + count ?color="yellow"
   count : count + 1`,
 
-  do_unless: `! Template: Do-Unless Exception Catching & Watches
-display "--- Exception Handling ---"
-do
-  display "Trying division by zero..."
-  val : 10 / 0
-unless DivisionByZeroError
-  display "Caught error: " + error
+  do_unless: `!!
+  Template: Do-Unless Exception Catching & Custom Throw Attributes
+  Demonstrates try-catch error handling with ?msg attributes.
+!!
 
-display "--- Internal Watch ---"
+display "--- Exception Handling ---" ?color="cyan"
+do
+  display "Throwing exception with custom message..." ?color="yellow"
+  throw DivisionByZeroError ?msg="Division by zero in calculation module"
+unless DivisionByZeroError
+  display "Caught exception: " + error ?color="green"
+
+display "--- Reactive Internal Watch ---" ?color="purple"
 flag : false
 do
-  display "Step 1 executes"
+  display "Step 1 executing..." ?color="cyan"
   flag : true
-  display "Step 2 does not execute"
+  display "Step 2 skipped!" ?color="yellow"
 unless internal flag
-  display "Reactive watch triggered!"`,
+  display "Reactive watch triggered!" ?color="green"`,
 
-  system_operators: `! Template: System Operators & Throws
-display "--- SuppressErrors Scope ---"
+  system_operators: `!!
+  Template: System Operators & SuppressErrors
+  Demonstrates error suppression block scope.
+!!
+
+display "--- SuppressErrors Scope ---" ?color="cyan"
 SuppressErrors
   val : 10 / 0
-  display "Error suppressed successfully!"
-
-display "--- Custom Throw ---"
-do
-  throw CustomError
-unless CustomError
-  display "Custom exception caught!"`,
-
-  prompt_math: `! Template: Interactive Input & Arithmetic
-display "Enter a number: "
-prompt num
-display "Calculated square: " + (num * num)`
+  display "Error suppressed successfully!" ?color="green"`
 };
 
-const defaultSampleCode = `! Welcome to VerScript
-! Showcase: Loops with Step, System Operators, Custom Throws, and Exception Handling
+const defaultSampleCode = `!!
+  VerScript Showcase — v1.2.0
+  Featuring:
+    1: Multiline Comments (!! ... !!) & Single-line Comments (!)
+    2: Command Attributes (?color, ?newline=false, ?default, ?msg)
+    3: Stepped Iteration & Loops (iterate i from x to y step z)
+    4: Exception Handling (do ... unless) & Custom Throws
+    5: System Block Operators (SuppressErrors, CriticalErrors)
+!!
 
-display "--- 1. Loop and Iteration with Step Showcase ---"
+display "=== 1. ANSI Colorized Terminal Output ===" ?color="cyan"
+display "Success: VerScript Engine Active!" ?color="green"
+display "Warning: Memory optimization recommended." ?color="yellow"
+display "Error: DivisionByZero handled gracefully." ?color="red"
+
+display "=== 2. Inline Printing with ?newline=false ===" ?color="purple"
+display "Loading modules: [" ?newline=false ?color="cyan"
+display "Core, " ?newline=false ?color="yellow"
+display "Lexer, " ?newline=false ?color="yellow"
+display "VS#-1B Neural Engine] " ?newline=false ?color="cyan"
+display "Done!" ?color="green"
+
+display "=== 3. Stepped Iteration Showcase ===" ?color="cyan"
 iterate idx from 1 to 10 step 2
-  display "Stepped Iteration: " + idx
+  display "Stepped Iteration: " + idx ?color="cyan"
 
-display "--- 2. SuppressErrors Block Operator ---"
-SuppressErrors
-  display "Running division by zero (skipped under SuppressErrors)..."
-  val : 10 / 0
-  display "Division by zero bypassed successfully!"
-
-display "--- 3. Custom Throw & Exception Catching ---"
+display "=== 4. Custom Throw with ?msg Attribute ===" ?color="purple"
 do
-  display "Throwing custom DivisionByZeroError..."
-  throw DivisionByZeroError
+  display "Triggering custom exception with ?msg attribute..." ?color="yellow"
+  throw DivisionByZeroError ?msg="Division by zero in calculate_ratio()"
 unless DivisionByZeroError
-  display "Safe exception catch of: " + error`;
+  display "Caught Exception: " + error ?color="green"
+
+display "=== 5. Error Suppression Block Operator ===" ?color="cyan"
+SuppressErrors
+  display "Running invalid operation under SuppressErrors..." ?color="yellow"
+  invalid_val : 10 / 0
+  display "Division by zero bypassed cleanly!" ?color="green"`;
 
 function App() {
   const [files, setFiles] = useState([
     { name: 'sample.vrs', content: defaultSampleCode },
-    { name: 'src/main.vrs', content: "! Main script in src folder\ndisplay \"Running from src/main.vrs\"\n" },
-    { name: 'tests/test_step.vrs', content: "! Test step loop\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i\n" }
+    { name: 'src/main.vrs', content: "!! Main script in src folder !!\ndisplay \"Running from src/main.vrs\" ?color=\"cyan\"\n" },
+    { name: 'tests/test_step.vrs', content: "!! Test step loop !!\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i ?color=\"yellow\"\n" }
   ]);
   const [folders, setFolders] = useState(['src', 'tests']);
   const [collapsedFolders, setCollapsedFolders] = useState({});
