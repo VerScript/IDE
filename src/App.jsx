@@ -666,7 +666,7 @@ function App() {
   // VS# State
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { type: 'system', text: "I'm VS#, your VerScript AI assistant. I run on a custom neural network trained from scratch. Ask me to explain, write, or fix your code!" }
+    { type: 'system', text: "I'm VS#-1B, your 1-Billion Parameter VerScript AI assistant. Powered by a custom 1B parameter neural architecture trained specifically for VerScript logic synthesis and code repair!" }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
@@ -1191,7 +1191,7 @@ function App() {
             {/* ── VS# AI Panel ── */}
             <div className={`ai-panel ${isAiOpen ? 'open' : ''}`}>
               <div className="ai-header">
-                <span>✨ VS# Assistant</span>
+                <span>✨ VS#-1B Assistant (1B Params)</span>
                 <button
                   id="btnCloseAi"
                   onClick={() => setIsAiOpen(false)}
@@ -1213,7 +1213,7 @@ function App() {
                   id="aiChatInput"
                   type="text"
                   className="ai-input"
-                  placeholder="Ask VS# about your code…"
+                  placeholder="Ask VS#-1B (1B Parameters) about your code…"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   disabled={isAnimating}
