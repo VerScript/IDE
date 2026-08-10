@@ -746,6 +746,34 @@ function App() {
   ]);
   const [isRunning, setIsRunning] = useState(false);
 
+  const [terminalHeight, setTerminalHeight] = useState(250);
+  const isDraggingTerminal = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingTerminal.current) return;
+      // The terminal is at the bottom. The new height is roughly window height minus mouse Y
+      let newHeight = window.innerHeight - e.clientY;
+      if (newHeight < 100) newHeight = 100;
+      if (newHeight > window.innerHeight * 0.8) newHeight = window.innerHeight * 0.8;
+      setTerminalHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingTerminal.current) {
+        isDraggingTerminal.current = false;
+        document.body.style.cursor = 'default';
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   // VS# State
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
@@ -1306,7 +1334,17 @@ function App() {
           </div>
 
           {/* ── Terminal ── */}
-          <div className="terminal-panel">
+                    {/* ── Terminal Resizer ── */}
+          <div
+            className="terminal-resizer"
+            onMouseDown={() => {
+              isDraggingTerminal.current = true;
+              document.body.style.cursor = 'row-resize';
+            }}
+          ></div>
+
+          {/* ── Terminal ── */}
+          <div className="terminal-panel" style={{ height: `${terminalHeight}px` }}>
             <div className="terminal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Terminal Output</span>
               <button
