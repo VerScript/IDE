@@ -389,6 +389,7 @@ function renderAnsiLine(text) {
         '0': null
     };
 
+    // eslint-disable-next-line no-control-regex
     const regex = /\033\[(\d+)m|\x1b\[(\d+)m/g;
     const parts = [];
     let lastIndex = 0;
@@ -1320,7 +1321,7 @@ function App() {
             <div className="terminal-output" ref={terminalRef} style={{ display: 'flex', flexDirection: 'column' }}>
               {output.map((line, i) => (
                 <div key={i} className={`terminal-line ${line.type}`}>
-                  {line.text}
+                  {renderAnsiLine(line.text)}
                 </div>
               ))}
             </div>
