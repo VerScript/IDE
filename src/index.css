@@ -281,8 +281,12 @@ body {
 
 /* Terminal Area */
 .terminal-resizer {
-  height: 4px;
+  height: 12px;
+  margin-top: -4px;
+  margin-bottom: -4px;
   background: var(--border-color);
+  background-clip: content-box;
+  padding: 4px 0;
   cursor: row-resize;
   transition: background 0.2s;
   z-index: 100;

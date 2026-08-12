@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -759,7 +761,22 @@ function App() {
       setTerminalHeight(newHeight);
     };
 
+    const handleTouchMove = (e) => {
+      if (!isDraggingTerminal.current) return;
+      let newHeight = window.innerHeight - e.touches[0].clientY;
+      if (newHeight < 100) newHeight = 100;
+      if (newHeight > window.innerHeight * 0.8) newHeight = window.innerHeight * 0.8;
+      setTerminalHeight(newHeight);
+    };
+
     const handleMouseUp = () => {
+      if (isDraggingTerminal.current) {
+        isDraggingTerminal.current = false;
+        document.body.style.cursor = 'default';
+      }
+    };
+
+    const handleTouchEnd = () => {
       if (isDraggingTerminal.current) {
         isDraggingTerminal.current = false;
         document.body.style.cursor = 'default';
@@ -768,9 +785,13 @@ function App() {
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, []);
 
@@ -962,11 +983,20 @@ function App() {
     setIsRunning(true);
     setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${activeFileName}>` }]);
 
+    let processedCode = code;
+    const colorCodeMap = { red: '31', green: '32', yellow: '33', purple: '34', pink: '35', cyan: '36' };
+    processedCode = processedCode.replace(/display\s+(.*?)\s+(?:\?newline=false\s+)?\?color="([^"]+)"(?:\s+\?newline=false)?/g, (match, expr, colorStr) => {
+      const hasNewlineFalse = match.includes('?newline=false');
+      const colorCode = colorCodeMap[colorStr.toLowerCase()] || '0';
+      const injected = `"\\x1b[${colorCode}m" + (${expr}) + "\\x1b[0m"`;
+      return hasNewlineFalse ? `display ${injected} ?newline=false` : `display ${injected}`;
+    });
+
     try {
       const res = await fetch(`${VS_SHARP_API}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code: processedCode })
       });
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -1315,7 +1345,11 @@ function App() {
               <div className="ai-messages" ref={chatRef}>
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`ai-msg ${msg.type}`}>
-                    {msg.text}
+                    {msg.type === 'system' ? (
+                      <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.text)) }} />
+                    ) : (
+                      msg.text
+                    )}
                   </div>
                 ))}
               </div>
@@ -1340,6 +1374,9 @@ function App() {
             onMouseDown={() => {
               isDraggingTerminal.current = true;
               document.body.style.cursor = 'row-resize';
+            }}
+            onTouchStart={() => {
+              isDraggingTerminal.current = true;
             }}
           ></div>
 
