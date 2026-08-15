@@ -134,7 +134,9 @@
 
     /* Terminal: full width, shorter */
     .terminal-panel {
-        height: 180px !important;
+        height: auto !important;
+        min-height: 150px;
+
         width: 100% !important;
     }
     .terminal-output {
@@ -153,4 +155,11 @@
     .ide-header { padding: 8px 10px !important; }
     .btn span { display: none; } /* icon-only on tiny screens */
     .editor-container { height: 260px !important; }
+}
+
+/* Ensure the terminal resizer is easier to grab on mobile */
+@media (max-width: 768px) {
+    .terminal-panel > div:first-child {
+        height: 15px !important;
+    }
 }
