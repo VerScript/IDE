@@ -92,6 +92,7 @@ const handleEditorWillMount = (monaco) => {
             'CriticalErrors': 'keyword',
             'SuppressErrors': 'keyword',
             'throw': 'keyword',
+            'inject': 'keyword',
             'step': 'keyword',
             '@default': 'identifier'
           }
@@ -250,6 +251,13 @@ const handleEditorWillMount = (monaco) => {
           detail: 'Execute block skipping all errors'
         },
         {
+          label: 'inject',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'inject ${1:python}\n\t$0',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Inject code from 100+ languages (e.g. python, js, cpp, verscript)'
+        },
+        {
           label: 'throw',
           kind: monaco.languages.CompletionItemKind.Keyword,
           insertText: 'throw ${1:ErrorName}',
@@ -271,6 +279,29 @@ const handleEditorWillMount = (monaco) => {
 
 
 const TEMPLATES = {
+  inject_polyglot: `!!
+  Template: Dynamic Polyglot Code Injection (inject [lang])
+  Supports 100+ languages (python, js, cpp, rust, go, java...)
+  Use "inject verscript" / "inject eval" for dynamic evaluation!
+!!
+
+display "=== Polyglot Code Injection Showcase ===" ?color="cyan"
+
+inject python
+  print("Python snippet executing inside VerScript!")
+  val = [x**2 for x in range(5)]
+  print("Squares:", val)
+
+inject javascript
+  const arr = ["Rust", "Go", "TypeScript", "Python"];
+  console.log("Joined languages:", arr.join(" -> "));
+
+inject verscript
+  display "Nested VerScript dynamic evaluation!" ?color="green"
+  iterate i from 1 to 3
+    display "Step: " + i ?color="yellow"`,
+
+
   attributes_demo: `!!
   Template: Command Attributes & Kwargs Showcase
   Attributes customize output colors, inline printing, prompt defaults, and throw messages!
@@ -420,6 +451,42 @@ function renderAnsiLine(text) {
 }
 
 function App() {
+  // ─── Resizable Terminal Mouse & Touch Handlers ───────────────────────
+  const handleResizeStart = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!isResizing) return;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const newHeight = window.innerHeight - clientY;
+      if (newHeight >= 100 && newHeight <= window.innerHeight * 0.7) {
+        setTerminalHeight(newHeight);
+      }
+    };
+
+    const handleEnd = () => setIsResizing(false);
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchend', handleEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, [isResizing]);
+
+  const [terminalHeight, setTerminalHeight] = useState(240);
+  const [isResizing, setIsResizing] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState('editor'); // 'editor' | 'ai' | 'terminal'
+
   const [files, setFiles] = useState([
     { name: 'sample.vrs', content: defaultSampleCode },
     { name: 'src/main.vrs', content: "!! Main script in src folder !!\ndisplay \"Running from src/main.vrs\" ?color=\"cyan\"\n" },
@@ -1304,8 +1371,21 @@ function App() {
             </div>
           </div>
 
-          {/* ── Terminal ── */}
-          <div className="terminal-panel">
+          {/* ── Resizable Terminal Handle ── */}
+          <div
+            className={`terminal-resizer ${isResizing ? 'active' : ''}`}
+            onMouseDown={handleResizeStart}
+            onTouchStart={handleResizeStart}
+            title="Drag to resize terminal"
+          >
+            <div className="resizer-bar" />
+          </div>
+
+          {/* ── Terminal Panel ── */}
+          <div
+            className={`terminal-panel ${activeMobileTab === 'terminal' ? 'mobile-show' : ''}`}
+            style={{ height: terminalHeight }}
+          >
             <div className="terminal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Terminal Output</span>
               <button
@@ -1320,10 +1400,32 @@ function App() {
             <div className="terminal-output" ref={terminalRef} style={{ display: 'flex', flexDirection: 'column' }}>
               {output.map((line, i) => (
                 <div key={i} className={`terminal-line ${line.type}`}>
-                  {line.text}
+                  {renderAnsiLine(line.text)}
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* ── Mobile Navigation Bar ── */}
+          <div className="mobile-tab-bar">
+            <button
+              className={`mobile-tab-btn ${activeMobileTab === 'editor' ? 'active' : ''}`}
+              onClick={() => setActiveMobileTab('editor')}
+            >
+              📝 Editor
+            </button>
+            <button
+              className={`mobile-tab-btn ${activeMobileTab === 'ai' ? 'active' : ''}`}
+              onClick={() => { setActiveMobileTab('ai'); setIsAiOpen(true); }}
+            >
+              ✨ Assistant
+            </button>
+            <button
+              className={`mobile-tab-btn ${activeMobileTab === 'terminal' ? 'active' : ''}`}
+              onClick={() => setActiveMobileTab('terminal')}
+            >
+              🖥️ Terminal
+            </button>
           </div>
         </div>
       </div>
