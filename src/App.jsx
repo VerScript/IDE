@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import { useState, useRef, useEffect } from 'react';
+import Editor from './MonacoEditor.jsx';
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ─── Backend URL ──────────────────────────────────────────────────
 const VS_SHARP_API = 'https://verscript-polyserver.onrender.com/vs-sharp';
 
 const handleEditorWillMount = (monaco) => {
@@ -451,6 +450,53 @@ function renderAnsiLine(text) {
 }
 
 function App() {
+  // ─── 1. All State & Ref Hooks ──────────────────────────────────────────
+  const [terminalHeight, setTerminalHeight] = useState(240);
+  const [isResizing, setIsResizing] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState('editor'); // 'editor' | 'ai' | 'terminal'
+
+  const [files, setFiles] = useState([
+    { name: 'sample.vrs', content: defaultSampleCode },
+    { name: 'src/main.vrs', content: "!! Main script in src folder !!\ndisplay \"Running from src/main.vrs\" ?color=\"cyan\"\n" },
+    { name: 'tests/test_step.vrs', content: "!! Test step loop !!\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i ?color=\"yellow\"\n" }
+  ]);
+  const [folders, setFolders] = useState(['src', 'tests']);
+  const [collapsedFolders, setCollapsedFolders] = useState({});
+  const [targetFolder, setTargetFolder] = useState('');
+  const [activeFileName, setActiveFileName] = useState('sample.vrs');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [newFileName, setNewFileName] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [decorationsList, setDecorationsList] = useState([]);
+  
+  const [code, setCode] = useState(defaultSampleCode);
+  const [output, setOutput] = useState([
+    { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by verscript-polyserver.onrender.com' },
+    { type: 'success', text: 'Ready. Press ▶ Run Code to execute.' }
+  ]);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // VS# State
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { type: 'system', text: "I'm VS#-1B, your 1-Billion Parameter VerScript AI assistant. Powered by a custom 1B parameter neural architecture trained specifically for VerScript logic synthesis and code repair!" }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const [theme, setTheme] = useState('cyberpunk');
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [debugStepIndex, setDebugStepIndex] = useState(0);
+  const [debugVariables, setDebugVariables] = useState({});
+  const [debugDecorations, setDebugDecorations] = useState([]);
+
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const isAnimatingRef = useRef(false);
+  const terminalRef = useRef(null);
+  const chatRef = useRef(null);
+
   // ─── Resizable Terminal Mouse & Touch Handlers ───────────────────────
   const handleResizeStart = (e) => {
     setIsResizing(true);
@@ -482,29 +528,6 @@ function App() {
       window.removeEventListener('touchend', handleEnd);
     };
   }, [isResizing]);
-
-  const [terminalHeight, setTerminalHeight] = useState(240);
-  const [isResizing, setIsResizing] = useState(false);
-  const [activeMobileTab, setActiveMobileTab] = useState('editor'); // 'editor' | 'ai' | 'terminal'
-
-  const [files, setFiles] = useState([
-    { name: 'sample.vrs', content: defaultSampleCode },
-    { name: 'src/main.vrs', content: "!! Main script in src folder !!\ndisplay \"Running from src/main.vrs\" ?color=\"cyan\"\n" },
-    { name: 'tests/test_step.vrs', content: "!! Test step loop !!\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i ?color=\"yellow\"\n" }
-  ]);
-  const [folders, setFolders] = useState(['src', 'tests']);
-  const [collapsedFolders, setCollapsedFolders] = useState({});
-  const [targetFolder, setTargetFolder] = useState('');
-  const [activeFileName, setActiveFileName] = useState('sample.vrs');
-  const [contextMenu, setContextMenu] = useState(null);
-  const [decorationsList, setDecorationsList] = useState([]);
-  const editorRef = useRef(null);
-
-  const [theme, setTheme] = useState('cyberpunk');
-  const [isDebugMode, setIsDebugMode] = useState(false);
-  const [debugStepIndex, setDebugStepIndex] = useState(0);
-  const [debugVariables, setDebugVariables] = useState({});
-  const [debugDecorations, setDebugDecorations] = useState([]);
 
   useEffect(() => {
     try {
@@ -651,8 +674,6 @@ function App() {
     }
   };
 
-  const monacoRef = useRef(null);
-
   useEffect(() => {
     const closeMenu = () => setContextMenu(null);
     window.addEventListener('click', closeMenu);
@@ -679,6 +700,12 @@ function App() {
     }).join('\n');
   };
 
+  const triggerAutoIndent = () => {
+    const formatted = formatCode(code);
+    setCode(formatted);
+    setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: formatted } : f));
+  };
+
   const handleContextMenu = (e) => {
     e.preventDefault();
     setContextMenu({
@@ -688,16 +715,10 @@ function App() {
     });
   };
 
-  const triggerAutoIndent = () => {
-    const formatted = formatCode(code);
-    setCode(formatted);
-    setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: formatted } : f));
-  };
-
   const handleHighlight = (color) => {
     if (!editorRef.current || !monacoRef.current) return;
     const selection = editorRef.current.getSelection();
-    if (selection.isEmpty()) {
+    if (!selection || (selection.startLineNumber === selection.endLineNumber && selection.startColumn === selection.endColumn)) {
       alert("Please select some text first to highlight!");
       return;
     }
@@ -760,68 +781,48 @@ function App() {
             selection.endLineNumber,
             selection.endColumn
           );
-          editorRef.current.executeEdits("my-source", [
-            { range, text: data.action.code, forceMoveMarkers: true }
-          ]);
+          editorRef.current.executeEdits('', [{ range, text: data.action.code, forceMoveMarkers: true }]);
         } else {
-          await animateTextTransition(code, data.action.code);
+          setCode(data.action.code);
+          setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: data.action.code } : f));
         }
       }
-    } catch (err) {
+    } catch (e) {
       setChatMessages(prev => [
         ...prev.slice(0, -1),
-        { type: 'system', text: `⚠️ Error adding comments: ${err.message}` }
+        { type: 'error', text: 'Failed to generate comments: ' + e.message }
       ]);
     }
   };
 
   const removeSyntaxErrors = async () => {
+    if (!editorRef.current) return;
     setIsAiOpen(true);
-    setChatMessages(prev => [...prev, { type: 'user', text: 'Remove errors from code.' }]);
-    setChatMessages(prev => [...prev, { type: 'system', text: '⏳ VS# is fixing syntax errors...' }]);
+    setChatMessages(prev => [...prev, { type: 'user', text: 'Fix all syntax errors in my code.' }]);
+    setChatMessages(prev => [...prev, { type: 'system', text: '⏳ VS# is analyzing and repairing syntax...' }]);
     
     try {
       const res = await fetch(`${VS_SHARP_API}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, message: "remove syntax errors" })
+        body: JSON.stringify({ code, message: "fix syntax errors" })
       });
       const data = await res.json();
       setChatMessages(prev => [
         ...prev.slice(0, -1),
-        { type: 'system', text: data.response || "Errors removed." }
+        { type: 'system', text: data.response || "Syntax repaired." }
       ]);
       if (data.action && data.action.type === 'edit') {
-        await animateTextTransition(code, data.action.code);
+        setCode(data.action.code);
+        setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: data.action.code } : f));
       }
-    } catch (err) {
+    } catch (e) {
       setChatMessages(prev => [
         ...prev.slice(0, -1),
-        { type: 'system', text: `⚠️ Error fixing code: ${err.message}` }
+        { type: 'error', text: 'Failed to fix syntax: ' + e.message }
       ]);
     }
   };
-  const [searchQuery, setSearchQuery] = useState('');
-  const [newFileName, setNewFileName] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const [code, setCode] = useState(defaultSampleCode);
-  const [output, setOutput] = useState([
-    { type: 'cmd',     text: 'VerScript VM v1.1.0 — powered by verscript-polyserver.onrender.com' },
-    { type: 'success', text: 'Ready. Press ▶ Run Code to execute.' }
-  ]);
-  const [isRunning, setIsRunning] = useState(false);
-
-  // VS# State
-  const [isAiOpen, setIsAiOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { type: 'system', text: "I'm VS#-1B, your 1-Billion Parameter VerScript AI assistant. Powered by a custom 1B parameter neural architecture trained specifically for VerScript logic synthesis and code repair!" }
-  ]);
-  const [chatInput, setChatInput] = useState('');
-  const [isAnimating, setIsAnimating] = useState(false);
-  const isAnimatingRef = useRef(false);
-  const terminalRef = useRef(null);
-  const chatRef = useRef(null);
 
   const handleSelectFile = (fileName) => {
     if (isAnimatingRef.current) return;
