@@ -54,7 +54,8 @@ export default function MonacoEditor({
       disposable.dispose();
       editor.dispose();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount to initialize the editor
 
   useEffect(() => {
     if (editorRef.current && theme) {
