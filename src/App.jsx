@@ -92,6 +92,7 @@ const handleEditorWillMount = (monaco) => {
             'SuppressErrors': 'keyword',
             'throw': 'keyword',
             'inject': 'keyword',
+            'alias': 'keyword',
             'step': 'keyword',
             '@default': 'identifier'
           }
@@ -269,6 +270,27 @@ const handleEditorWillMount = (monaco) => {
           insertText: 'step ${1:2}',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: 'Step increment for loops'
+        },
+        {
+          label: 'alias',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'alias ${1:display}: ${2:print}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Single-line command alias'
+        },
+        {
+          label: 'alias (block)',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'alias:\n\t${1:display}: ${2:print}\n\t${3:loop}: ${4:repeat}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Multi-line alias block'
+        },
+        {
+          label: 'alias (attributes)',
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: 'alias ${1:display}: ${2:print} ? ${3:color}=${4:tint}',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          detail: 'Command alias with attribute mapping'
         }
       ];
       return { suggestions };
@@ -278,6 +300,30 @@ const handleEditorWillMount = (monaco) => {
 
 
 const TEMPLATES = {
+  alias_demo: `!!
+  Template: Command Aliases & Attribute Mapping (alias keyword)
+  Demonstrates single-line, attribute remapping, and multi-line alias blocks!
+!!
+
+display "=== Single-line Command Alias ===" ?color="cyan"
+alias display: print
+print "Hello via aliased 'print' command!" ?color="green"
+
+display "=== Alias with Attribute Mapping ===" ?color="purple"
+alias display: echo ? color=tint
+echo "Echoed with mapped attribute ?tint -> ?color" ?tint="cyan"
+
+display "=== Multi-line Alias Block ===" ?color="yellow"
+alias:
+  loop: repeat
+  iterate: for
+
+repeat 2
+  print "Repeated loop via alias!" ?color="green"
+
+for i from 1 to 5 step 2
+  print "Iterate aliased as for: " + i ?color="purple"`,
+
   inject_polyglot: `!!
   Template: Dynamic Polyglot Code Injection (inject [lang])
   Supports 100+ languages (python, js, cpp, rust, go, java...)
