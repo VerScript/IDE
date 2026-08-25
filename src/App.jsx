@@ -413,43 +413,49 @@ SuppressErrors
 };
 
 const defaultSampleCode = `!!
-  VerScript Showcase — v1.2.0
+  VerScript Polyglot Showcase — v1.2.0
   Featuring:
-    1: Multiline Comments and Single-line Comments
-    2: Command Attributes (?color, ?newline=false, ?default, ?msg)
+    1: Command Aliasing & Attribute Remapping (alias display: print ? color=tint)
+    2: Unquoted Truecolor Hex Attributes (?color=#hex) & ANSI Sequences
     3: Stepped Iteration & Loops (iterate i from x to y step z)
-    4: Exception Handling (do ... unless) & Custom Throws
-    5: System Block Operators (SuppressErrors, CriticalErrors)
+    4: Reactive Watch Condition Guards (do ... unless internal)
+    5: Polyglot Code Injection (inject [lang]) & System Operators
 !!
 
-display "=== 1. ANSI Colorized Terminal Output ===" ?color="cyan"
-display "Success: VerScript Engine Active!" ?color="green"
-display "Warning: Memory optimization recommended." ?color="yellow"
-display "Error: DivisionByZero handled gracefully." ?color="red"
+alias display: print ? color=tint
 
-display "=== 2. Inline Printing with ?newline=false ===" ?color="purple"
-display "Loading modules: [" ?newline=false ?color="cyan"
-display "Core, " ?newline=false ?color="yellow"
-display "Lexer, " ?newline=false ?color="yellow"
-display "VS#-1B Neural Engine] " ?newline=false ?color="cyan"
-display "Done!" ?color="green"
+print "=== 1. ANSI & Truecolor Hex Terminal Output ===" ?tint=#00ffcc
+print "Success: VerScript Engine Active!" ?tint=#50fa7b
+print "Warning: Memory optimization recommended." ?tint=#f1fa8c
+print "Error: DivisionByZero handled gracefully." ?tint=#ff5555
 
-display "=== 3. Stepped Iteration Showcase ===" ?color="cyan"
-iterate idx from 1 to 10 step 2
-  display "Stepped Iteration: " + idx ?color="cyan"
+print "=== 2. Inline Printing with ?newline=false ===" ?tint="purple"
+print "Loading modules: [" ?newline=false ?tint="cyan"
+print "Core, " ?newline=false ?tint="yellow"
+print "Lexer, " ?newline=false ?tint="yellow"
+print "VS#-1B Neural Engine] " ?newline=false ?tint="cyan"
+print "Done!" ?tint="green"
 
-display "=== 4. Custom Throw with ?msg Attribute ===" ?color="purple"
+print "=== 3. Stepped Iteration Showcase ===" ?tint=#00d2ff
+iterate idx from 1 to 9 step 2
+  print "Stepped Index (+2): " + idx ?tint="cyan"
+
+print "=== 4. Custom Throw with ?msg Attribute ===" ?tint="purple"
 do
-  display "Triggering custom exception with ?msg attribute..." ?color="yellow"
+  print "Triggering custom exception with ?msg attribute..." ?tint="yellow"
   throw DivisionByZeroError ?msg="Division by zero in calculate_ratio()"
 unless DivisionByZeroError
-  display "Caught Exception: " + error ?color="green"
+  print "Caught Exception: " + error ?tint="green"
 
-display "=== 5. Error Suppression Block Operator ===" ?color="cyan"
+print "=== 5. Polyglot Code Injection ===" ?tint=#ff79c6
+inject python ?color="yellow"
+  print("Polyglot Python snippet executing cleanly!")
+
+print "=== 6. Error Suppression Block Operator ===" ?tint="cyan"
 SuppressErrors
-  display "Running invalid operation under SuppressErrors..." ?color="yellow"
+  print "Running invalid operation under SuppressErrors..." ?tint="yellow"
   invalid_val : 10 / 0
-  display "Division by zero bypassed cleanly!" ?color="green"`;
+  print "Division by zero bypassed cleanly!" ?tint="green"`;
 
 
 // --- ANSI ESCAPE CODE RENDERER FOR TERMINAL ---
