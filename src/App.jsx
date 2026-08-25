@@ -453,20 +453,34 @@ SuppressErrors
 
 
 // --- ANSI ESCAPE CODE RENDERER FOR TERMINAL ---
-function renderAnsiLine(text) {
-    if (!text) return null;
-    const colorMap = {
-        '31': '#ff5555',
-        '32': '#50fa7b',
-        '33': '#f1fa8c',
-        '34': '#bd93f9',
-        '35': '#ff79c6',
-        '36': '#8be9fd',
-        '0': null
+function renderAnsiLine(rawText) {
+    if (!rawText) return null;
+    let text = String(rawText)
+        .replace(/\\033\[/g, '\x1b[')
+        .replace(/\\x1b\[/gi, '\x1b[')
+        .replace(/\\u001b\[/gi, '\x1b[');
+
+    const standardColors = {
+        '30': '#6272a4',
+        '31': '#ff5555', // Red
+        '32': '#50fa7b', // Green
+        '33': '#f1fa8c', // Yellow
+        '34': '#8be9fd', // Blue/Cyan
+        '35': '#ff79c6', // Purple/Magenta
+        '36': '#00ffcc', // Cyan
+        '37': '#f8f8f2', // White
+        '90': '#6272a4',
+        '91': '#ff6e6e',
+        '92': '#69ff94',
+        '93': '#ffffa5',
+        '94': '#d6acff',
+        '95': '#ff92df',
+        '96': '#a4ffff',
+        '97': '#ffffff'
     };
 
-    // eslint-disable-next-line no-control-regex
-    const regex = /\033\[(\d+)m|\x1b\[(\d+)m/g;
+    // Match any ANSI SGR sequence: \x1b[...m
+    const regex = /\x1b\[([\d;]+)m/g;
     const parts = [];
     let lastIndex = 0;
     let currentColor = null;
@@ -478,8 +492,30 @@ function renderAnsiLine(text) {
             const segment = text.slice(lastIndex, matchIndex);
             parts.push({ text: segment, color: currentColor });
         }
-        const code = match[1] || match[2];
-        currentColor = colorMap[code] !== undefined ? colorMap[code] : currentColor;
+
+        const codeSeq = match[1];
+        if (codeSeq === '0') {
+            currentColor = null;
+        } else if (codeSeq.startsWith('38;2;')) {
+            const rgbParts = codeSeq.split(';');
+            if (rgbParts.length >= 5) {
+                const r = parseInt(rgbParts[2], 10);
+                const g = parseInt(rgbParts[3], 10);
+                const b = parseInt(rgbParts[4], 10);
+                currentColor = `rgb(${r}, ${g}, ${b})`;
+            }
+        } else {
+            const pArr = codeSeq.split(';');
+            let col = null;
+            for (const p of pArr) {
+                if (standardColors[p]) {
+                    col = standardColors[p];
+                    break;
+                }
+            }
+            currentColor = col !== null ? col : currentColor;
+        }
+
         lastIndex = regex.lastIndex;
     }
 
@@ -490,7 +526,7 @@ function renderAnsiLine(text) {
     if (parts.length === 0) return text;
 
     return parts.map((p, idx) => (
-        <span key={idx} style={p.color ? { color: p.color, fontWeight: 'bold' } : {}}>
+        <span key={idx} style={p.color ? { color: p.color, fontWeight: 'bold', textShadow: `0 0 5px ${p.color}55` } : {}}>
             {p.text}
         </span>
     ));
