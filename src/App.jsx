@@ -486,6 +486,7 @@ function renderAnsiLine(rawText) {
     };
 
     // Match any ANSI SGR sequence: \x1b[...m
+    // eslint-disable-next-line no-control-regex
     const regex = /\x1b\[([\d;]+)m/g;
     const parts = [];
     let lastIndex = 0;
