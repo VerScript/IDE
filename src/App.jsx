@@ -486,7 +486,6 @@ function renderAnsiLine(rawText) {
     };
 
     // Match any ANSI SGR sequence: \x1b[...m
-    // eslint-disable-next-line no-control-regex
     const regex = /\x1b\[([\d;]+)m/g;
     const parts = [];
     let lastIndex = 0;
@@ -548,13 +547,15 @@ function App() {
   const [files, setFiles] = useState([
     { name: 'sample.vrs', content: defaultSampleCode },
     { name: 'src/main.vrs', content: "!! Main script in src folder !!\ndisplay \"Running from src/main.vrs\" ?color=\"cyan\"\n" },
+    { name: 'core/Math.lib.vrs', content: "! VerScript Core Library: Math\nlib Math\n  dynamic:\n    def func abs x\n      if x < 0 then\n        reply 0 - x\n      reply x\n    def func gcd a b\n      set x: (abs a)\n      set y: (abs b)\n      while y != 0\n        set temp: y\n        set q: x / y\n        set y: x - (q * y)\n        set x: temp\n      reply x\n" },
     { name: 'tests/test_step.vrs', content: "!! Test step loop !!\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i ?color=\"yellow\"\n" }
   ]);
-  const [folders, setFolders] = useState(['src', 'tests']);
+  const [folders, setFolders] = useState(['src', 'core', 'tests']);
   const [collapsedFolders, setCollapsedFolders] = useState({});
   const [targetFolder, setTargetFolder] = useState('');
   const [activeFileName, setActiveFileName] = useState('sample.vrs');
   const [searchQuery, setSearchQuery] = useState('');
+  const [extensionFilter, setExtensionFilter] = useState('all'); // 'all' | '.vrs' | '.lib.vrs'
   const [newFileName, setNewFileName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
@@ -914,12 +915,69 @@ function App() {
     }
   };
 
+  const detectStaticLibName = (content) => {
+    if (!content) return null;
+    const lines = content.split('\n');
+    let libName = null;
+    let hasOtherTopLevelCode = false;
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('//')) {
+        continue;
+      }
+      const match = trimmed.match(/^(?:lib|library)\s+([A-Za-z0-9_]+)/);
+      if (match) {
+        if (!libName) {
+          libName = match[1];
+        } else {
+          hasOtherTopLevelCode = true;
+        }
+      } else if (!line.startsWith(' ') && !line.startsWith('\t')) {
+        hasOtherTopLevelCode = true;
+      }
+    }
+
+    if (libName && !hasOtherTopLevelCode) {
+      return libName;
+    }
+    return null;
+  };
+
+  const checkAndAutoRenameLib = (fileName, fileContent, currentFiles) => {
+    const libName = detectStaticLibName(fileContent);
+    if (!libName) return fileName;
+    const dir = fileName.includes('/') ? fileName.substring(0, fileName.lastIndexOf('/') + 1) : '';
+    const targetName = `${dir}${libName}.lib.vrs`;
+    if (fileName === targetName) return fileName;
+    if (currentFiles.some(f => f.name.toLowerCase() === targetName.toLowerCase() && f.name !== fileName)) {
+      return fileName;
+    }
+    return targetName;
+  };
+
+  const matchesExtFilter = (fileName) => {
+    if (extensionFilter === 'all') return true;
+    if (extensionFilter === '.lib.vrs') return fileName.endsWith('.lib.vrs');
+    if (extensionFilter === '.vrs') return fileName.endsWith('.vrs') && !fileName.endsWith('.lib.vrs');
+    return true;
+  };
+
   const handleSelectFile = (fileName) => {
     if (isAnimatingRef.current) return;
-    setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, content: code } : f));
-    const selected = files.find(f => f.name === fileName);
+    const renamedActive = checkAndAutoRenameLib(activeFileName, code, files);
+    const updatedFiles = files.map(f => {
+      if (f.name === activeFileName) {
+        return { name: renamedActive, content: code };
+      }
+      return f;
+    });
+    setFiles(updatedFiles);
+
+    const targetName = (fileName === activeFileName) ? renamedActive : fileName;
+    const selected = updatedFiles.find(f => f.name === targetName) || updatedFiles.find(f => f.name === fileName);
     if (selected) {
-      setActiveFileName(fileName);
+      setActiveFileName(selected.name);
       setCode(selected.content);
     }
     setIsSidebarOpen(false);
@@ -972,14 +1030,25 @@ function App() {
       name = `${targetFolder}/${name}`;
     }
     if (!name.endsWith('.vrs')) {
-      name += '.vrs';
+      if (name.endsWith('.lib')) {
+        name += '.vrs';
+      } else {
+        name += '.vrs';
+      }
     }
     if (files.some(f => f.name.toLowerCase() === name.toLowerCase())) {
       alert('A file with this name already exists!');
       return;
     }
-    const newFiles = files.map(f => f.name === activeFileName ? { ...f, content: code } : f);
-    const newFile = { name, content: `! VerScript ${name}\n` };
+    const isLib = name.endsWith('.lib.vrs');
+    const baseLibName = isLib ? name.split('/').pop().replace('.lib.vrs', '') : '';
+    const initialContent = isLib
+      ? `! VerScript Library: ${baseLibName}\nlib ${baseLibName}\n  const:\n    version: "1.0.0"\n  dynamic:\n    def func example\n      reply 42\n`
+      : `! VerScript ${name}\n`;
+
+    const renamedActive = checkAndAutoRenameLib(activeFileName, code, files);
+    const newFiles = files.map(f => f.name === activeFileName ? { name: renamedActive, content: code } : f);
+    const newFile = { name, content: initialContent };
     setFiles([...newFiles, newFile]);
     setActiveFileName(name);
     setCode(newFile.content);
@@ -1088,8 +1157,15 @@ function App() {
   // ─── Run Code via VS-Sharp /run endpoint ─────────────────────────
   const handleRun = async () => {
     if (isRunning) return;
+    const renamedActive = checkAndAutoRenameLib(activeFileName, code, files);
+    let runName = activeFileName;
+    if (renamedActive !== activeFileName) {
+      setFiles(prev => prev.map(f => f.name === activeFileName ? { ...f, name: renamedActive, content: code } : f));
+      setActiveFileName(renamedActive);
+      runName = renamedActive;
+    }
     setIsRunning(true);
-    setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${activeFileName}>` }]);
+    setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName}>` }]);
 
     try {
       const res = await fetch(`${VS_SHARP_API}/run`, {
@@ -1225,6 +1301,64 @@ function App() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <div className="extension-filters" style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+              <button
+                type="button"
+                className={`filter-btn ${extensionFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setExtensionFilter('all')}
+                style={{
+                  flex: 1,
+                  padding: '3px 4px',
+                  fontSize: '0.72rem',
+                  borderRadius: '4px',
+                  border: '1px solid ' + (extensionFilter === 'all' ? '#BD93F9' : '#44475A'),
+                  background: extensionFilter === 'all' ? 'rgba(189, 147, 249, 0.25)' : 'transparent',
+                  color: extensionFilter === 'all' ? '#F8F8F2' : '#6272A4',
+                  cursor: 'pointer',
+                  fontWeight: extensionFilter === 'all' ? '600' : 'normal'
+                }}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`filter-btn ${extensionFilter === '.vrs' ? 'active' : ''}`}
+                onClick={() => setExtensionFilter('.vrs')}
+                style={{
+                  flex: 1,
+                  padding: '3px 4px',
+                  fontSize: '0.72rem',
+                  borderRadius: '4px',
+                  border: '1px solid ' + (extensionFilter === '.vrs' ? '#50FA7B' : '#44475A'),
+                  background: extensionFilter === '.vrs' ? 'rgba(80, 250, 123, 0.25)' : 'transparent',
+                  color: extensionFilter === '.vrs' ? '#50FA7B' : '#6272A4',
+                  cursor: 'pointer',
+                  fontWeight: extensionFilter === '.vrs' ? '600' : 'normal'
+                }}
+                title="VerScript Programs (.vrs)"
+              >
+                .vrs
+              </button>
+              <button
+                type="button"
+                className={`filter-btn ${extensionFilter === '.lib.vrs' ? 'active' : ''}`}
+                onClick={() => setExtensionFilter('.lib.vrs')}
+                style={{
+                  flex: 1.2,
+                  padding: '3px 4px',
+                  fontSize: '0.72rem',
+                  borderRadius: '4px',
+                  border: '1px solid ' + (extensionFilter === '.lib.vrs' ? '#8BE9FD' : '#44475A'),
+                  background: extensionFilter === '.lib.vrs' ? 'rgba(139, 233, 253, 0.25)' : 'transparent',
+                  color: extensionFilter === '.lib.vrs' ? '#8BE9FD' : '#6272A4',
+                  cursor: 'pointer',
+                  fontWeight: extensionFilter === '.lib.vrs' ? '600' : 'normal'
+                }}
+                title="Libraries (.lib.vrs)"
+              >
+                .lib.vrs
+              </button>
+            </div>
           </div>
           <div style={{ padding: '0 10px', marginTop: '10px' }}>
             <button className="btn" style={{ width: '100%', fontSize: '0.85rem' }} onClick={handleAddFolder}>
@@ -1247,7 +1381,7 @@ function App() {
               <input
                 type="text"
                 className="add-file-input"
-                placeholder="New file.vrs..."
+                placeholder="New file.vrs or lib.lib.vrs..."
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 style={{ flex: 1 }}
@@ -1259,6 +1393,7 @@ function App() {
             {/* Root Files */}
             {files
               .filter(f => !f.name.includes('/'))
+              .filter(f => matchesExtFilter(f.name))
               .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
               .map(file => (
                 <li
@@ -1274,6 +1409,11 @@ function App() {
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {file.name}
                   </span>
+                  {file.name.endsWith('.lib.vrs') && (
+                    <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(139, 233, 253, 0.2)', color: '#8BE9FD', marginRight: '4px', fontWeight: 'bold' }}>
+                      LIB
+                    </span>
+                  )}
                   <button
                     className="btn-delete-file"
                     onClick={(e) => handleDeleteFile(file.name, e)}
@@ -1287,7 +1427,11 @@ function App() {
             {/* Folders */}
             {folders.map(folder => {
               const folderFiles = files.filter(f => f.name.startsWith(folder + '/'));
-              if (searchQuery && !folderFiles.some(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))) {
+              const matchingFolderFiles = folderFiles
+                .filter(f => matchesExtFilter(f.name))
+                .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+              if ((searchQuery || extensionFilter !== 'all') && matchingFolderFiles.length === 0) {
                 return null;
               }
 
@@ -1315,31 +1459,34 @@ function App() {
 
                   {!collapsedFolders[folder] && (
                     <ul className="folder-files">
-                      {folderFiles
-                        .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                        .map(file => (
-                          <li
-                            key={file.name}
-                            className={`file-item ${activeFileName === file.name ? 'active' : ''}`}
-                            onClick={() => handleSelectFile(file.name)}
-                          >
-                            <img
-                              src="https://github.com/VerScript.png"
-                              alt="vrs"
-                              style={{ width: '16px', height: '16px', borderRadius: '3px', marginRight: '6px' }}
-                            />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                              {file.name.replace(folder + '/', '')}
+                      {matchingFolderFiles.map(file => (
+                        <li
+                          key={file.name}
+                          className={`file-item ${activeFileName === file.name ? 'active' : ''}`}
+                          onClick={() => handleSelectFile(file.name)}
+                        >
+                          <img
+                            src="https://github.com/VerScript.png"
+                            alt="vrs"
+                            style={{ width: '16px', height: '16px', borderRadius: '3px', marginRight: '6px' }}
+                          />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                            {file.name.replace(folder + '/', '')}
+                          </span>
+                          {file.name.endsWith('.lib.vrs') && (
+                            <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(139, 233, 253, 0.2)', color: '#8BE9FD', marginRight: '4px', fontWeight: 'bold' }}>
+                              LIB
                             </span>
-                            <button
-                              className="btn-delete-file"
-                              onClick={(e) => handleDeleteFile(file.name, e)}
-                              title="Delete file"
-                            >
-                              ✕
-                            </button>
-                          </li>
-                        ))}
+                          )}
+                          <button
+                            className="btn-delete-file"
+                            onClick={(e) => handleDeleteFile(file.name, e)}
+                            title="Delete file"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </div>
