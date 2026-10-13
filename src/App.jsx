@@ -94,6 +94,46 @@ const handleEditorWillMount = (monaco) => {
             'inject': 'keyword',
             'alias': 'keyword',
             'step': 'keyword',
+            'DataType': 'keyword',
+            'extends': 'keyword',
+            'it': 'keyword',
+            'num': 'keyword',
+            'bool': 'keyword',
+            'str': 'keyword',
+            'arr': 'keyword',
+            'entity': 'keyword',
+            'set': 'keyword',
+            'def': 'keyword',
+            'func': 'keyword',
+            'method': 'keyword',
+            'inbound': 'keyword',
+            'outbound': 'keyword',
+            'outscope': 'keyword',
+            'reply': 'keyword',
+            'class': 'keyword',
+            'lib': 'keyword',
+            'library': 'keyword',
+            'static': 'keyword',
+            'dynamic': 'keyword',
+            'const': 'keyword',
+            'public': 'keyword',
+            'private': 'keyword',
+            'Pseudo': 'keyword',
+            'Random': 'keyword',
+            'seed': 'keyword',
+            'between': 'keyword',
+            'choice': 'keyword',
+            'shuffle': 'keyword',
+            'sample': 'keyword',
+            'boolean': 'keyword',
+            'uuid': 'keyword',
+            'name': 'keyword',
+            'email': 'keyword',
+            'alphaNumeric': 'keyword',
+            'DataTypeError': 'keyword',
+            'ScopeViolationError': 'keyword',
+            'ImmutableError': 'keyword',
+            'VisibilityError': 'keyword',
             '@default': 'identifier'
           }
         }],
@@ -300,6 +340,37 @@ const handleEditorWillMount = (monaco) => {
 
 
 const TEMPLATES = {
+  datatypes_pseudo: `!!
+  Template: DataType Constraints & Native Pseudo PRNG
+  Demonstrates custom types, parameter constraints, and PRNG engine!
+!!
+
+display "=== 1. Primitive DataType Constraints ===" ?color="cyan"
+num user_level: 5
+str user_tag: "Alpha"
+bool is_verified: true
+display "User: " + user_tag + " (Level: " + user_level + ")" ?color="green"
+
+display "=== 2. Custom Constrained DataType ===" ?color="purple"
+DataType PortNumber extends num
+  it >= 1024
+  it <= 65535
+
+PortNumber active_port: 8080
+display "Validated Port: " + active_port ?color="green"
+
+do
+  PortNumber invalid_port: 80
+unless DataTypeError
+  display "Purity Guard: Caught invalid port 80!" ?color="yellow"
+
+display "=== 3. Native Pseudo & Random Engine ===" ?color="cyan"
+Pseudo.seed 42
+display "Random Port: " + (between 1024 9999) ?color="yellow"
+display "PRNG UUID: " + (uuid) ?color="purple"
+arr agents: ["Sentinel", "Guardian", "Warden"]
+display "Selected Agent: " + (choice agents) ?color="green"`,
+
   alias_demo: `!!
   Template: Command Aliases & Attribute Mapping (alias keyword)
   Demonstrates single-line, attribute remapping, and multi-line alias blocks!
