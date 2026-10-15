@@ -134,13 +134,31 @@ const handleEditorWillMount = (monaco) => {
             'ScopeViolationError': 'keyword',
             'ImmutableError': 'keyword',
             'VisibilityError': 'keyword',
+            'temp': 'keyword',
+            'inst': 'keyword',
+            'del': 'keyword',
+            'on': 'keyword',
+            'when': 'keyword',
+            'emit': 'keyword',
+            'async': 'keyword',
+            'sync': 'keyword',
+            'guard': 'keyword',
+            'chan': 'keyword',
+            'send': 'keyword',
+            'recv': 'keyword',
+            'match': 'keyword',
+            'with': 'keyword',
+            'start': 'keyword',
+            'complete': 'keyword',
+            'interval': 'keyword',
+            'timeout': 'keyword',
             '@default': 'identifier'
           }
         }],
         [/[0-9]+/, 'number'],
         [/"([^"\\]|\\.)*"/, 'string'],
         [/![^\n]*/, 'comment'],
-        [/[+\-*/:=><]|x=/, 'operators']
+        [/[+\-*/:=><]|x=|\|>/, 'operators']
       ]
     }
   });
