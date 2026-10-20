@@ -1,3 +1,4 @@
+import { simulateVerScriptAsync } from './instantVM.js';
 import { useState, useRef, useEffect } from 'react';
 import Editor from './MonacoEditor.jsx';
 
@@ -1067,6 +1068,7 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('editor'); // 'editor' | 'ai' | 'terminal'
 
+  const [engineMode, setEngineMode] = useState('instant'); // 'instant' | 'cloud'
   const [terminalTab, setTerminalTab] = useState('output'); // 'output' | 'stdin'
   const [stdinInput, setStdinInput] = useState('');
   const [pendingPrompt, setPendingPrompt] = useState(null); // { vname, defVal, resolve }
@@ -1735,36 +1737,50 @@ function App() {
     }
     setIsRunning(true);
     setTerminalTab('output');
-    setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName}>` }]);
 
+    const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
+
+    if (engineMode === 'instant') {
+      setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName} (Instant VM)>` }]);
+      try {
+        await simulateVerScriptAsync(
+          code,
+          allFiles,
+          stdinInput,
+          (lineObj) => setOutput(prev => [...prev, lineObj]),
+          askTerminalPrompt
+        );
+      } catch (err) {
+        setOutput(prev => [...prev, { type: 'error', text: err.message }]);
+      } finally {
+        setIsRunning(false);
+        setPendingPrompt(null);
+      }
+      return;
+    }
+
+    // Cloud VM mode with auto-routing fallback to Instant VM
+    setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName} (Cloud VM)>` }]);
     try {
       let stdinData = stdinInput || '';
       
-      // If user hasn't pre-filled Stdin drawer, collect inputs interactively in-console
-      if (!stdinData.trim()) {
-        const promptRegex = /prompt\s+([a-zA-Z0-9_]+)(?:\s+\?default="([^"]*)")?/g;
-        let pMatch;
-        const promptMatches = [];
-        while ((pMatch = promptRegex.exec(code)) !== null) {
-          promptMatches.push({ vname: pMatch[1], defVal: pMatch[2] !== undefined ? pMatch[2] : '' });
-        }
+      const controller = new AbortController();
+      const cloudTimeout = setTimeout(() => controller.abort(), 4500);
 
-        for (const pm of promptMatches) {
-          const val = await askTerminalPrompt(pm.vname, pm.defVal);
-          stdinData += (val !== undefined && val !== null && val !== '' ? val : pm.defVal) + '\n';
-          setOutput(prev => [...prev, { type: 'system', text: `[prompt] ${pm.vname} = ${val || pm.defVal}` }]);
-        }
-      }
-
-      const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
       const res = await fetch(`${VS_SHARP_API}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, files: allFiles, stdin: stdinData })
+        body: JSON.stringify({ code, files: allFiles, stdin: stdinData }),
+        signal: controller.signal
       });
+      clearTimeout(cloudTimeout);
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
+
+      if (data.error && data.error.includes('timed out')) {
+        throw new Error('Cloud execution timed out. Auto-routing to Instant VM...');
+      }
 
       if (data.output) {
         const lines = data.output.split('\n').filter(l => l !== '');
@@ -1784,9 +1800,20 @@ function App() {
     } catch (err) {
       setOutput(prev => [
         ...prev,
-        { type: 'error', text: `⚠️ Could not reach run endpoint: ${err.message}` },
-        { type: 'error', text: 'Hint: The Render service may be waking up (free tier). Try again in ~30s.' }
+        { type: 'cmd', text: `⚡ ${err.message || 'Routing to Instant VM for in-code execution...'}` }
       ]);
+      // Fallback to Instant VM for interactive execution
+      try {
+        await simulateVerScriptAsync(
+          code,
+          allFiles,
+          stdinInput,
+          (lineObj) => setOutput(prev => [...prev, lineObj]),
+          askTerminalPrompt
+        );
+      } catch (innerErr) {
+        setOutput(prev => [...prev, { type: 'error', text: innerErr.message }]);
+      }
     } finally {
       setIsRunning(false);
       setPendingPrompt(null);
@@ -1865,6 +1892,17 @@ function App() {
           <button id="btnExportZip" className="btn" onClick={handleExportZip} title="Export project as ZIP">
             📦 Export ZIP
           </button>
+          <select
+            id="selectEngine"
+            className="btn"
+            value={engineMode}
+            onChange={(e) => setEngineMode(e.target.value)}
+            title="Switch execution VM"
+            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #00ffcc', color: '#00ffcc', fontWeight: 'bold' }}
+          >
+            <option value="instant">⚡ Instant VM</option>
+            <option value="cloud">☁️ Cloud VM</option>
+          </select>
           <button
             id="btnRun"
             className="btn btn-run"
