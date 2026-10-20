@@ -386,7 +386,7 @@ export function resolveLineAlias(line, aliases) {
  * Executes VerScript code asynchronously line by line, providing progressive streaming
  * and interactive in-code prompt input.
  */
-export async function simulateVerScriptAsync(code, files = null, stdin = '', onOutputLine, onPromptRequest) {
+export async function simulateVerScriptAsync(code, files = null, stdin = '', onOutputLine, onPromptRequest, isTopLevel = true) {
     const lines = code.split('\n');
     const vars = {};
     const aliases = {};
@@ -525,7 +525,7 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
                     i++;
                 }
                 for (let c = 0; c < count; c++) {
-                    await simulateVerScriptAsync(block.join('\n'), files, stdin, onOutputLine, onPromptRequest);
+                    await simulateVerScriptAsync(block.join('\n'), files, stdin, onOutputLine, onPromptRequest, false);
                 }
             }
             // Iterate
@@ -545,7 +545,7 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
                     for (let val = start; val <= end; val += step) {
                         vars[varName] = val;
                         let subCode = block.map(bLine => bLine.replace(new RegExp(`\\b${varName}\\b`, 'g'), val)).join('\n');
-                        await simulateVerScriptAsync(subCode, files, stdin, onOutputLine, onPromptRequest);
+                        await simulateVerScriptAsync(subCode, files, stdin, onOutputLine, onPromptRequest, false);
                     }
                 } else {
                     i++;
@@ -561,7 +561,7 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
                     i++;
                 }
                 if (lang === 'verscript' || lang === 'vrs' || lang === 'eval') {
-                    await simulateVerScriptAsync(block.join('\n'), files, stdin, onOutputLine, onPromptRequest);
+                    await simulateVerScriptAsync(block.join('\n'), files, stdin, onOutputLine, onPromptRequest, false);
                 } else {
                     onOutputLine({ type: 'success', text: `[Inject:${lang}] Evaluated ${block.length} code line(s) cleanly.` });
                 }
@@ -593,18 +593,20 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
 
                     if (thrownErr && (!unlessTarget || unlessTarget === 'error' || unlessTarget === thrownErr)) {
                         vars['error'] = thrownErr;
-                        await simulateVerScriptAsync(unlessBlock.join('\n'), files, stdin, onOutputLine, onPromptRequest);
+                        await simulateVerScriptAsync(unlessBlock.join('\n'), files, stdin, onOutputLine, onPromptRequest, false);
                         caught = true;
                     }
                 }
                 if (!caught) {
-                    await simulateVerScriptAsync(doBlock.join('\n'), files, stdin, onOutputLine, onPromptRequest);
+                    await simulateVerScriptAsync(doBlock.join('\n'), files, stdin, onOutputLine, onPromptRequest, false);
                 }
             } else {
                 i++;
             }
         }
-        onOutputLine({ type: 'cmd', text: 'Program completed.' });
+        if (isTopLevel) {
+            onOutputLine({ type: 'cmd', text: 'Program completed.' });
+        }
     } catch (err) {
         onOutputLine({ type: 'error', text: err.message });
     }
