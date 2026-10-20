@@ -1336,11 +1336,24 @@ function App() {
     setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName}>` }]);
 
     try {
+      // Scan for prompt commands and gather user input interactively
+      const promptRegex = /prompt\s+([a-zA-Z0-9_]+)(?:\s+\?default="([^"]*)")?/g;
+      let pMatch;
+      let stdinData = '';
+      while ((pMatch = promptRegex.exec(code)) !== null) {
+        const vname = pMatch[1];
+        const defVal = pMatch[2] || '';
+        const entered = (typeof window !== 'undefined' && window.prompt) ? window.prompt(`[VerScript IDE] Enter input for '${vname}':`, defVal) : defVal;
+        const val = (entered !== null) ? entered : defVal;
+        stdinData += val + '\n';
+        setOutput(prev => [...prev, { type: 'system', text: `[prompt] ${vname} = ${val}` }]);
+      }
+
       const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
       const res = await fetch(`${VS_SHARP_API}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, files: allFiles })
+        body: JSON.stringify({ code, files: allFiles, stdin: stdinData })
       });
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
