@@ -5,6 +5,120 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const VS_SHARP_API = 'https://verscript-polyserver.onrender.com/vs-sharp';
 
+// ─── PURE JS ZIP GENERATOR FOR PROJECT EXPORT ───
+function createZip(files) {
+  const makeCrcTable = () => {
+    let c;
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      c = n;
+      for (let k = 0; k < 8; k++) {
+        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      table[n] = c >>> 0;
+    }
+    return table;
+  };
+  const crcTable = makeCrcTable();
+  const getCrc32 = (bytes) => {
+    let crc = 0 ^ (-1);
+    for (let i = 0; i < bytes.length; i++) {
+      crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
+    }
+    return (crc ^ (-1)) >>> 0;
+  };
+
+  const textEncoder = new TextEncoder();
+  const fileRecords = [];
+
+  for (const f of files) {
+    const nameBytes = textEncoder.encode(f.name);
+    const contentBytes = textEncoder.encode(f.content || '');
+    const crc = getCrc32(contentBytes);
+    fileRecords.push({
+      nameBytes,
+      contentBytes,
+      crc,
+      uncompressedSize: contentBytes.length,
+      compressedSize: contentBytes.length,
+      modTime: 0,
+      modDate: 0
+    });
+  }
+
+  let localHeadersSize = 0;
+  let cdSize = 0;
+  for (const r of fileRecords) {
+    localHeadersSize += 30 + r.nameBytes.length + r.contentBytes.length;
+    cdSize += 46 + r.nameBytes.length;
+  }
+  const totalSize = localHeadersSize + cdSize + 22;
+
+  const buffer = new Uint8Array(totalSize);
+  const view = new DataView(buffer.buffer);
+  let offset = 0;
+
+  for (const r of fileRecords) {
+    r.localHeaderOffset = offset;
+    view.setUint32(offset, 0x04034b50, true);
+    view.setUint16(offset + 4, 20, true);
+    view.setUint16(offset + 6, 0, true);
+    view.setUint16(offset + 8, 0, true);
+    view.setUint16(offset + 10, r.modTime, true);
+    view.setUint16(offset + 12, r.modDate, true);
+    view.setUint32(offset + 14, r.crc, true);
+    view.setUint32(offset + 18, r.compressedSize, true);
+    view.setUint32(offset + 22, r.uncompressedSize, true);
+    view.setUint16(offset + 26, r.nameBytes.length, true);
+    view.setUint16(offset + 28, 0, true);
+    offset += 30;
+
+    buffer.set(r.nameBytes, offset);
+    offset += r.nameBytes.length;
+
+    buffer.set(r.contentBytes, offset);
+    offset += r.contentBytes.length;
+  }
+
+  const cdOffset = offset;
+
+  for (const r of fileRecords) {
+    view.setUint32(offset, 0x02014b50, true);
+    view.setUint16(offset + 4, 20, true);
+    view.setUint16(offset + 6, 20, true);
+    view.setUint16(offset + 8, 0, true);
+    view.setUint16(offset + 10, 0, true);
+    view.setUint16(offset + 12, r.modTime, true);
+    view.setUint16(offset + 14, r.modDate, true);
+    view.setUint32(offset + 16, r.crc, true);
+    view.setUint32(offset + 20, r.compressedSize, true);
+    view.setUint32(offset + 24, r.uncompressedSize, true);
+    view.setUint16(offset + 28, r.nameBytes.length, true);
+    view.setUint16(offset + 30, 0, true);
+    view.setUint16(offset + 32, 0, true);
+    view.setUint16(offset + 34, 0, true);
+    view.setUint16(offset + 36, 0, true);
+    view.setUint32(offset + 38, 0, true);
+    view.setUint32(offset + 42, r.localHeaderOffset, true);
+    offset += 46;
+
+    buffer.set(r.nameBytes, offset);
+    offset += r.nameBytes.length;
+  }
+
+  view.setUint32(offset, 0x06054b50, true);
+  view.setUint16(offset + 4, 0, true);
+  view.setUint16(offset + 6, 0, true);
+  view.setUint16(offset + 8, fileRecords.length, true);
+  view.setUint16(offset + 10, fileRecords.length, true);
+  view.setUint32(offset + 12, cdSize, true);
+  view.setUint32(offset + 16, cdOffset, true);
+  view.setUint16(offset + 20, 0, true);
+
+  return buffer;
+}
+
+
 const handleEditorWillMount = (monaco) => {
   const languages = monaco.languages.getLanguages();
   if (languages.some(lang => lang.id === 'verscript')) return;
@@ -232,201 +346,451 @@ const handleEditorWillMount = (monaco) => {
     }
   });
 
+  // ─── MONACO AUTOCOMPLETE FOR ALL 118 KEYWORDS, 29 ERRORS & 21 STDLIB MODULES ───
   monaco.languages.registerCompletionItemProvider('verscript', {
-    provideCompletionItems: (_model, _position) => {
-      const suggestions = [
-        {
-          label: 'display',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'display ${1:expression}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Print value to stdout'
-        },
-        {
-          label: 'prompt',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'prompt ${1:variable}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Read value from stdin'
-        },
-        {
-          label: 'true',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'true',
-          detail: 'Boolean true'
-        },
-        {
-          label: 'false',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'false',
-          detail: 'Boolean false'
-        },
-        {
-          label: 'loop',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'loop ${1:n}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Repeat n times'
-        },
-        {
-          label: 'iterate',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'iterate ${1:i} from ${2:x} to ${3:y}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Iterate i from x to y'
-        },
-        {
-          label: 'if',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'if ${1:condition} then\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'If statement'
-        },
-        {
-          label: 'else if',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'else if ${1:condition} then\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Else If statement'
-        },
-        {
-          label: 'else',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'else\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Else statement'
-        },
-        {
-          label: 'while',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'while ${1:condition}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'While loop'
-        },
-        {
-          label: 'until',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'until ${1:condition}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Until loop'
-        },
-        {
-          label: 'do',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'do\n\t$0\nunless ${1:error}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Try-Unless block'
-        },
-        {
-          label: 'unless',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'unless ${1:condition}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Unless handler'
-        },
-        {
-          label: 'unless internal',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'unless internal ${1:condition}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Unless internal condition watch'
-        },
-        {
-          label: 'unless external',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'unless external ${1:condition}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Unless external condition block'
-        },
-        {
-          label: 'internal',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'internal',
-          detail: 'Internal modifier keyword'
-        },
-        {
-          label: 'external',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'external',
-          detail: 'External modifier keyword'
-        },
-        {
-          label: 'error',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'error',
-          detail: 'Caught error keyword symbol'
-        },
-        {
-          label: 'ForceErrors',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'ForceErrors\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Execute block forcing display of all errors'
-        },
-        {
-          label: 'CriticalErrors',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'CriticalErrors\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Execute block throwing critical errors only'
-        },
-        {
-          label: 'SuppressErrors',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'SuppressErrors\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Execute block skipping all errors'
-        },
-        {
-          label: 'inject',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'inject ${1:python}\n\t$0',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Inject code from 100+ languages (e.g. python, js, cpp, verscript)'
-        },
-        {
-          label: 'throw',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'throw ${1:ErrorName}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Throw registered error or active error'
-        },
-        {
-          label: 'step',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'step ${1:2}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Step increment for loops'
-        },
-        {
-          label: 'alias',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'alias ${1:display}: ${2:print}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Single-line command alias'
-        },
-        {
-          label: 'alias (block)',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'alias:\n\t${1:display}: ${2:print}\n\t${3:loop}: ${4:repeat}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Multi-line alias block'
-        },
-        {
-          label: 'alias (attributes)',
-          kind: monaco.languages.CompletionItemKind.Keyword,
-          insertText: 'alias ${1:display}: ${2:print} ? ${3:color}=${4:tint}',
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          detail: 'Command alias with attribute mapping'
-        }
+    provideCompletionItems: (model, position) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn
+      };
+
+      const keywords = [
+        { label: 'display', insertText: 'display ${1:expression}', isSnippet: true, detail: 'Print value to stdout with optional ?color attribute' },
+        { label: 'prompt', insertText: 'prompt ${1:variable} ?default="${2:Explorer}"', isSnippet: true, detail: 'Read interactive input from console stdin' },
+        { label: 'true', insertText: 'true', detail: 'Boolean true' },
+        { label: 'false', insertText: 'false', detail: 'Boolean false' },
+        { label: 'loop', insertText: 'loop ${1:5}\n\t$0', isSnippet: true, detail: 'Repeat block n times' },
+        { label: 'iterate', insertText: 'iterate ${1:i} from ${2:1} to ${3:10} step ${4:1}\n\t$0', isSnippet: true, detail: 'Iterate i from start to end with step override' },
+        { label: 'from', insertText: 'from ', detail: 'Loop range lower bound' },
+        { label: 'to', insertText: 'to ', detail: 'Loop range upper bound' },
+        { label: 'step', insertText: 'step ${1:2}', isSnippet: true, detail: 'Loop step increment override' },
+        { label: 'by', insertText: 'by ${1:2}', isSnippet: true, detail: 'Step increment alias' },
+        { label: 'if', insertText: 'if ${1:condition} then\n\t$0', isSnippet: true, detail: 'If conditional branch' },
+        { label: 'then', insertText: 'then', detail: 'Then conditional block prefix' },
+        { label: 'else if', insertText: 'else if ${1:condition} then\n\t$0', isSnippet: true, detail: 'Else If conditional branch' },
+        { label: 'else', insertText: 'else\n\t$0', isSnippet: true, detail: 'Else fallback branch' },
+        { label: 'while', insertText: 'while ${1:condition}\n\t$0', isSnippet: true, detail: 'While loop' },
+        { label: 'until', insertText: 'until ${1:condition}\n\t$0', isSnippet: true, detail: 'Until loop (loops while condition is false)' },
+        { label: 'do', insertText: 'do\n\t$0\nunless ${1:error}', isSnippet: true, detail: 'Try-Unless exception handling block' },
+        { label: 'unless', insertText: 'unless ${1:condition}\n\t$0', isSnippet: true, detail: 'Exception catcher / reactive watch block' },
+        { label: 'unless internal', insertText: 'unless internal ${1:state_flag}\n\t$0', isSnippet: true, detail: 'Watch internal reactive state changes' },
+        { label: 'unless external', insertText: 'unless external ${1:event}\n\t$0', isSnippet: true, detail: 'Watch external reactive trigger' },
+        { label: 'internal', insertText: 'internal', detail: 'Internal state modifier' },
+        { label: 'external', insertText: 'external', detail: 'External trigger modifier' },
+        { label: 'error', insertText: 'error', detail: 'Caught error object / message symbol' },
+        { label: 'ForceErrors', insertText: 'ForceErrors\n\t$0', isSnippet: true, detail: 'Execute block forcing strict error reporting' },
+        { label: 'CriticalErrors', insertText: 'CriticalErrors\n\t$0', isSnippet: true, detail: 'Execute block throwing critical errors only' },
+        { label: 'SuppressErrors', insertText: 'SuppressErrors\n\t$0', isSnippet: true, detail: 'Execute block suppressing all runtime errors' },
+        { label: 'throw', insertText: 'throw ${1:RuntimeError} ?msg="${2:Error description}"', isSnippet: true, detail: 'Throw error with custom ?msg and ?code attributes' },
+        { label: 'inject', insertText: 'inject ${1:python}\n\t$0', isSnippet: true, detail: 'Inject code from 100+ languages (python, js, c, cpp, etc.)' },
+        { label: 'alias', insertText: 'alias ${1:display}: ${2:print} ? ${3:color}=${4:tint}', isSnippet: true, detail: 'Define keyword alias with attribute remapping' },
+        { label: 'header', insertText: 'header ${1:ServiceName}:\n    func ${2:methodName}(${3:args})', isSnippet: true, detail: 'Declare a typed interface contract header' },
+        { label: 'include', insertText: 'include "${1:include/service.h.vrs}"', isSnippet: true, detail: 'Include a header interface contract' },
+        { label: 'pragma', insertText: 'pragma ${1|once,strict|}', isSnippet: true, detail: 'Compiler directive' },
+        { label: 'pragma once', insertText: 'pragma once', detail: 'Prevent duplicate header inclusions' },
+        { label: 'pragma strict', insertText: 'pragma strict', detail: 'Enforce strict type checking and contract conformity' },
+        { label: 'export', insertText: 'export ${1:symbol}', isSnippet: true, detail: 'Export symbol from module' },
+        { label: 'struct', insertText: 'struct ${1:RecordName}:\n    ${2:id}: ${3:num}\n    ${4:name}: ${5:str}', isSnippet: true, detail: 'Declare a structured typed data record' },
+        { label: 'enum', insertText: 'enum ${1:Status}:\n    ${2:PENDING} : 0\n    ${3:ACTIVE} : 1\n    ${4:COMPLETED} : 2', isSnippet: true, detail: 'Declare an enumerated constant mapping' },
+        { label: 'config', insertText: 'config ${1|strict_mode,error_mode,timeout_ms,target_version,log_level|}: ${2:value}', isSnippet: true, detail: 'Configure runtime options' },
+        { label: 'DataType', insertText: 'DataType ${1:CustomType} extends ${2|num,str,bool,arr|}\n  it ${3:>= 0}', isSnippet: true, detail: 'Declare custom constrained scalar type' },
+        { label: 'extends', insertText: 'extends ', detail: 'Inherit from primitive type in DataType declaration' },
+        { label: 'it', insertText: 'it', detail: 'Constraint evaluation subject in DataType block' },
+        { label: 'num', insertText: 'num ', detail: 'Numeric primitive type' },
+        { label: 'bool', insertText: 'bool ', detail: 'Boolean primitive type' },
+        { label: 'str', insertText: 'str ', detail: 'String primitive type' },
+        { label: 'arr', insertText: 'arr ', detail: 'Array primitive type' },
+        { label: 'entity', insertText: 'entity ', detail: 'Object entity primitive type' },
+        { label: 'set', insertText: 'set ${1:varName}: ${2:value}', isSnippet: true, detail: 'Assign variable value' },
+        { label: 'def', insertText: 'def func ${1:name} ${2:param}\n  reply ${3:result}', isSnippet: true, detail: 'Function definition prefix' },
+        { label: 'func', insertText: 'func ${1:name}(${2:params}):\n    reply ${3:result}', isSnippet: true, detail: 'Function declaration' },
+        { label: 'method', insertText: 'method ${1:name}(${2:params}):\n    reply ${3:result}', isSnippet: true, detail: 'Method declaration inside class or library' },
+        { label: 'inbound', insertText: 'inbound', detail: 'Inbound parameter modifier' },
+        { label: 'outbound', insertText: 'outbound', detail: 'Outbound parameter modifier' },
+        { label: 'outscope', insertText: 'outscope', detail: 'Outscope closure variable modifier' },
+        { label: 'reply', insertText: 'reply ${1:value}', isSnippet: true, detail: 'Return result from function or method' },
+        { label: 'class', insertText: 'class ${1:ClassName}:\n    $0', isSnippet: true, detail: 'Define object-oriented class' },
+        { label: 'lib', insertText: 'lib ${1:LibName}\n  dynamic:\n    def func ${2:example}\n      reply ${3:42}', isSnippet: true, detail: 'Define modular library block' },
+        { label: 'library', insertText: 'library ${1:LibName}\n  dynamic:\n    def func ${2:example}\n      reply ${3:42}', isSnippet: true, detail: 'Library definition alias' },
+        { label: 'load', insertText: 'load ${1|Matrix,Vector,Math,Stats,Pseudo,Fs,Path,Env,Time,Http,Json,Crypto,Regex,Arrays,Strings,Log,Color,Console,Benchmark,Mock,Assert|}', isSnippet: true, detail: 'Load standard library or native module into memory' },
+        { label: 'import', insertText: 'import "${1:library_file}"', isSnippet: true, detail: 'Import external VerScript library' },
+        { label: 'static', insertText: 'static:\n    $0', isSnippet: true, detail: 'Static module members section' },
+        { label: 'dynamic', insertText: 'dynamic:\n    $0', isSnippet: true, detail: 'Dynamic module members section' },
+        { label: 'const', insertText: 'const ${1:NAME}: ${2:value}', isSnippet: true, detail: 'Immutable constant variable' },
+        { label: 'public', insertText: 'public ', detail: 'Public member visibility' },
+        { label: 'private', insertText: 'private ', detail: 'Private member visibility' },
+        { label: 'temp', insertText: 'temp ${1:varName}: ${2:value}', isSnippet: true, detail: 'Scoped temporary variable' },
+        { label: 'inst', insertText: 'inst ${1:instance}: ${2:ClassName}()', isSnippet: true, detail: 'Instantiate class' },
+        { label: 'del', insertText: 'del ${1:varName}', isSnippet: true, detail: 'Delete variable from current scope' },
+        { label: 'on', insertText: 'on ${1:event} do\n    $0', isSnippet: true, detail: 'Register event handler' },
+        { label: 'when', insertText: 'when ${1:condition} do\n    $0', isSnippet: true, detail: 'Reactive state trigger' },
+        { label: 'emit', insertText: 'emit ${1:eventName} ?data=${2:payload}', isSnippet: true, detail: 'Emit asynchronous event' },
+        { label: 'async', insertText: 'async func ${1:name}():\n    $0', isSnippet: true, detail: 'Asynchronous task definition' },
+        { label: 'sync', insertText: 'sync ${1:task}', isSnippet: true, detail: 'Synchronize async execution' },
+        { label: 'guard', insertText: 'guard ${1:condition} else reply ${2:null}', isSnippet: true, detail: 'Guard condition with early exit' },
+        { label: 'chan', insertText: 'set ${1:ch}: chan(${2:5})', isSnippet: true, detail: 'Create concurrency channel with capacity' },
+        { label: 'send', insertText: 'send ${1:ch} <- ${2:val}', isSnippet: true, detail: 'Send value into concurrency channel' },
+        { label: 'recv', insertText: 'recv ${1:val} <- ${2:ch}', isSnippet: true, detail: 'Receive value from concurrency channel' },
+        { label: 'match', insertText: 'match ${1:expr} with\n    ${2:pattern} -> ${3:action}', isSnippet: true, detail: 'Pattern matching construct' },
+        { label: 'with', insertText: 'with ', detail: 'Match statement pattern target' },
+        { label: 'is', insertText: 'is ', detail: 'Comparison operator keyword' },
+        { label: 'even', insertText: 'is even', detail: 'Parity check operator' },
+        { label: 'odd', insertText: 'is odd', detail: 'Parity check operator' },
+        { label: 'isEven', insertText: 'isEven', detail: 'Parity check function' },
+        { label: 'isOdd', insertText: 'isOdd', detail: 'Parity check function' },
+        { label: 'and', insertText: 'and ', detail: 'Logical AND operator' },
+        { label: 'or', insertText: 'or ', detail: 'Logical OR operator' },
+        { label: 'not', insertText: 'not ', detail: 'Logical NOT operator' },
+        { label: 'xor', insertText: 'xor ', detail: 'Bitwise / Logical XOR operator' },
+        { label: 'shl', insertText: 'shl ', detail: 'Bitwise shift left' },
+        { label: 'shr', insertText: 'shr ', detail: 'Bitwise shift right' }
       ];
+
+      const attributes = [
+        { label: '?color=', insertText: '?color="${1|green,cyan,yellow,red,purple,blue,white|}"', isSnippet: true, detail: 'Attribute: Colorize output with named color' },
+        { label: '?color=#', insertText: '?color=#${1:00ffcc}', isSnippet: true, detail: 'Attribute: Colorize output with 24-bit Truecolor hex' },
+        { label: '?tint=', insertText: '?tint="${1|green,cyan,yellow,red,purple,blue|}"', isSnippet: true, detail: 'Attribute: Tint alias for color' },
+        { label: '?newline=false', insertText: '?newline=false', detail: 'Attribute: Print inline segment without trailing newline' },
+        { label: '?default=', insertText: '?default="${1:Explorer}"', isSnippet: true, detail: 'Attribute: Default fallback value for prompt stdin' },
+        { label: '?msg=', insertText: '?msg="${1:Custom error message}"', isSnippet: true, detail: 'Attribute: Custom error message attached to throw' },
+        { label: '?code=', insertText: '?code=${1:500}', isSnippet: true, detail: 'Attribute: Numerical error code' },
+        { label: '?retry=', insertText: '?retry=${1:3}', isSnippet: true, detail: 'Attribute: Retry count for operation' },
+        { label: '?catch=', insertText: '?catch=${1:RuntimeError}', isSnippet: true, detail: 'Attribute: Inline error handler' },
+        { label: '?timeout=', insertText: '?timeout=${1:1000}', isSnippet: true, detail: 'Attribute: Execution timeout in milliseconds' }
+      ];
+
+      const errors = [
+        'MemoryAllocationError', 'UndefinedVariableError', 'InvalidOperandError', 'DivisionByZeroError',
+        'IndentationError', 'LoopIterationError', 'LoopLimitError', 'LoopDirectionError',
+        'LoopStepError', 'ScopeViolationError', 'SyntaxError', 'RuntimeError',
+        'InvalidErrorNameError', 'SystemError', 'VisibilityError', 'ImmutableError',
+        'IndexOutOfBoundsError', 'EntityError', 'FileError', 'DomainError',
+        'AssertError', 'DataTypeError', 'UnassignedVariableError', 'AsyncError',
+        'ChannelError', 'MatchError', 'OperationError', 'HeaderMismatchError', 'InvalidHeaderError'
+      ].map(err => ({
+        label: err,
+        insertText: err,
+        kind: monaco.languages.CompletionItemKind.Class,
+        detail: 'Standard Error Type'
+      }));
+
+      const stdlibs = [
+        // Matrix
+        { label: 'Matrix.create', insertText: 'Matrix.create(${1:rows}, ${2:cols})', isSnippet: true, detail: 'Create zero matrix (r x c)' },
+        { label: 'Matrix.identity', insertText: 'Matrix.identity(${1:size})', isSnippet: true, detail: 'Create n x n identity matrix' },
+        { label: 'Matrix.add', insertText: 'Matrix.add(${1:m1}, ${2:m2})', isSnippet: true, detail: 'Matrix addition' },
+        { label: 'Matrix.sub', insertText: 'Matrix.sub(${1:m1}, ${2:m2})', isSnippet: true, detail: 'Matrix subtraction' },
+        { label: 'Matrix.mul', insertText: 'Matrix.mul(${1:m1}, ${2:m2})', isSnippet: true, detail: 'Matrix multiplication' },
+        { label: 'Matrix.scale', insertText: 'Matrix.scale(${1:m}, ${2:scalar})', isSnippet: true, detail: 'Scale matrix by scalar' },
+        { label: 'Matrix.transpose', insertText: 'Matrix.transpose(${1:m})', isSnippet: true, detail: 'Transpose matrix rows and columns' },
+        { label: 'Matrix.det', insertText: 'Matrix.det(${1:m})', isSnippet: true, detail: 'Compute determinant of square matrix' },
+        { label: 'Matrix.inverse', insertText: 'Matrix.inverse(${1:m})', isSnippet: true, detail: 'Compute inverse matrix' },
+        { label: 'Matrix.solve', insertText: 'Matrix.solve(${1:A}, ${2:B})', isSnippet: true, detail: 'Solve linear system A * X = B' },
+        { label: 'Matrix.trace', insertText: 'Matrix.trace(${1:m})', isSnippet: true, detail: 'Sum of main diagonal elements' },
+        { label: 'Matrix.rank', insertText: 'Matrix.rank(${1:m})', isSnippet: true, detail: 'Compute matrix rank' },
+
+        // Vector
+        { label: 'Vector.create', insertText: 'Vector.create(${1:components})', isSnippet: true, detail: 'Create n-dimensional vector' },
+        { label: 'Vector.dot', insertText: 'Vector.dot(${1:v1}, ${2:v2})', isSnippet: true, detail: 'Vector dot product' },
+        { label: 'Vector.cross', insertText: 'Vector.cross(${1:v1}, ${2:v2})', isSnippet: true, detail: '3D vector cross product' },
+        { label: 'Vector.mag', insertText: 'Vector.mag(${1:v})', isSnippet: true, detail: 'Vector magnitude / Euclidean length' },
+        { label: 'Vector.norm', insertText: 'Vector.norm(${1:v})', isSnippet: true, detail: 'Normalize vector to unit length' },
+        { label: 'Vector.dist', insertText: 'Vector.dist(${1:v1}, ${2:v2})', isSnippet: true, detail: 'Distance between two vectors' },
+        { label: 'Vector.angle', insertText: 'Vector.angle(${1:v1}, ${2:v2})', isSnippet: true, detail: 'Angle between two vectors in radians' },
+
+        // Math
+        { label: 'Math.abs', insertText: 'Math.abs(${1:x})', isSnippet: true, detail: 'Absolute value' },
+        { label: 'Math.sqrt', insertText: 'Math.sqrt(${1:x})', isSnippet: true, detail: 'Square root' },
+        { label: 'Math.pow', insertText: 'Math.pow(${1:base}, ${2:exp})', isSnippet: true, detail: 'Exponentiation' },
+        { label: 'Math.floor', insertText: 'Math.floor(${1:x})', isSnippet: true, detail: 'Floor round' },
+        { label: 'Math.ceil', insertText: 'Math.ceil(${1:x})', isSnippet: true, detail: 'Ceiling round' },
+        { label: 'Math.round', insertText: 'Math.round(${1:x})', isSnippet: true, detail: 'Nearest round' },
+        { label: 'Math.sin', insertText: 'Math.sin(${1:x})', isSnippet: true, detail: 'Trigonometric sine' },
+        { label: 'Math.cos', insertText: 'Math.cos(${1:x})', isSnippet: true, detail: 'Trigonometric cosine' },
+        { label: 'Math.tan', insertText: 'Math.tan(${1:x})', isSnippet: true, detail: 'Trigonometric tangent' },
+        { label: 'Math.max', insertText: 'Math.max(${1:a}, ${2:b})', isSnippet: true, detail: 'Maximum of two numbers' },
+        { label: 'Math.min', insertText: 'Math.min(${1:a}, ${2:b})', isSnippet: true, detail: 'Minimum of two numbers' },
+        { label: 'Math.clamp', insertText: 'Math.clamp(${1:val}, ${2:min}, ${3:max})', isSnippet: true, detail: 'Clamp value between min and max' },
+
+        // Stats
+        { label: 'Stats.mean', insertText: 'Stats.mean(${1:arr})', isSnippet: true, detail: 'Arithmetic mean of array' },
+        { label: 'Stats.median', insertText: 'Stats.median(${1:arr})', isSnippet: true, detail: 'Median value of array' },
+        { label: 'Stats.variance', insertText: 'Stats.variance(${1:arr})', isSnippet: true, detail: 'Sample variance' },
+        { label: 'Stats.stddev', insertText: 'Stats.stddev(${1:arr})', isSnippet: true, detail: 'Standard deviation' },
+        { label: 'Stats.sum', insertText: 'Stats.sum(${1:arr})', isSnippet: true, detail: 'Sum of array elements' },
+        { label: 'Stats.mode', insertText: 'Stats.mode(${1:arr})', isSnippet: true, detail: 'Most frequent element' },
+
+        // Pseudo
+        { label: 'Pseudo.seed', insertText: 'Pseudo.seed(${1:seed})', isSnippet: true, detail: 'Seed deterministic PRNG' },
+        { label: 'Pseudo.rand', insertText: 'Pseudo.rand()', detail: 'Generate random 32-bit integer' },
+        { label: 'Pseudo.randRange', insertText: 'Pseudo.randRange(${1:min}, ${2:max})', isSnippet: true, detail: 'Random integer in [min, max]' },
+        { label: 'Pseudo.randFloat', insertText: 'Pseudo.randFloat()', detail: 'Random float in [0.0, 1.0)' },
+        { label: 'Pseudo.choice', insertText: 'Pseudo.choice(${1:arr})', isSnippet: true, detail: 'Random choice from array' },
+        { label: 'Pseudo.shuffle', insertText: 'Pseudo.shuffle(${1:arr})', isSnippet: true, detail: 'In-place array shuffle' },
+
+        // Arrays
+        { label: 'Arrays.push', insertText: 'Arrays.push(${1:arr}, ${2:item})', isSnippet: true, detail: 'Append item to array' },
+        { label: 'Arrays.pop', insertText: 'Arrays.pop(${1:arr})', isSnippet: true, detail: 'Remove and return last element' },
+        { label: 'Arrays.map', insertText: 'Arrays.map(${1:arr}, ${2:fn})', isSnippet: true, detail: 'Map elements with function' },
+        { label: 'Arrays.filter', insertText: 'Arrays.filter(${1:arr}, ${2:fn})', isSnippet: true, detail: 'Filter elements matching predicate' },
+        { label: 'Arrays.reduce', insertText: 'Arrays.reduce(${1:arr}, ${2:fn}, ${3:initial})', isSnippet: true, detail: 'Reduce array to single value' },
+        { label: 'Arrays.find', insertText: 'Arrays.find(${1:arr}, ${2:item})', isSnippet: true, detail: 'Find item index in array' },
+        { label: 'Arrays.sort', insertText: 'Arrays.sort(${1:arr})', isSnippet: true, detail: 'Sort array elements' },
+        { label: 'Arrays.reverse', insertText: 'Arrays.reverse(${1:arr})', isSnippet: true, detail: 'Reverse array in-place' },
+        { label: 'Arrays.join', insertText: 'Arrays.join(${1:arr}, ${2:delim})', isSnippet: true, detail: 'Join elements with delimiter' },
+
+        // Strings
+        { label: 'Strings.split', insertText: 'Strings.split(${1:str}, ${2:delim})', isSnippet: true, detail: 'Split string by delimiter' },
+        { label: 'Strings.upper', insertText: 'Strings.upper(${1:str})', isSnippet: true, detail: 'Convert to uppercase' },
+        { label: 'Strings.lower', insertText: 'Strings.lower(${1:str})', isSnippet: true, detail: 'Convert to lowercase' },
+        { label: 'Strings.trim', insertText: 'Strings.trim(${1:str})', isSnippet: true, detail: 'Trim whitespace' },
+        { label: 'Strings.replace', insertText: 'Strings.replace(${1:str}, ${2:target}, ${3:sub})', isSnippet: true, detail: 'Replace substring' },
+        { label: 'Strings.contains', insertText: 'Strings.contains(${1:str}, ${2:sub})', isSnippet: true, detail: 'Check if string contains substring' },
+        { label: 'Strings.sub', insertText: 'Strings.sub(${1:str}, ${2:start}, ${3:len})', isSnippet: true, detail: 'Extract substring' },
+
+        // Json
+        { label: 'Json.parse', insertText: 'Json.parse(${1:jsonStr})', isSnippet: true, detail: 'Parse JSON string into object' },
+        { label: 'Json.stringify', insertText: 'Json.stringify(${1:obj})', isSnippet: true, detail: 'Serialize object to JSON string' },
+        { label: 'Json.get', insertText: 'Json.get(${1:obj}, ${2:key})', isSnippet: true, detail: 'Get JSON property' },
+        { label: 'Json.set', insertText: 'Json.set(${1:obj}, ${2:key}, ${3:val})', isSnippet: true, detail: 'Set JSON property' },
+        { label: 'Json.isValid', insertText: 'Json.isValid(${1:str})', isSnippet: true, detail: 'Validate JSON syntax' },
+
+        // Validate
+        { label: 'Validate.isEmail', insertText: 'Validate.isEmail(${1:str})', isSnippet: true, detail: 'Validate email address' },
+        { label: 'Validate.isUrl', insertText: 'Validate.isUrl(${1:str})', isSnippet: true, detail: 'Validate URL format' },
+        { label: 'Validate.isNum', insertText: 'Validate.isNum(${1:val})', isSnippet: true, detail: 'Check if value is numeric' },
+        { label: 'Validate.isAlpha', insertText: 'Validate.isAlpha(${1:str})', isSnippet: true, detail: 'Check if string is alphabetic' },
+        { label: 'Validate.isAlphanumeric', insertText: 'Validate.isAlphanumeric(${1:str})', isSnippet: true, detail: 'Check if string is alphanumeric' },
+        { label: 'Validate.matches', insertText: 'Validate.matches(${1:str}, ${2:pattern})', isSnippet: true, detail: 'Test string against regex' },
+
+        // Crypto
+        { label: 'Crypto.md5', insertText: 'Crypto.md5(${1:str})', isSnippet: true, detail: 'Compute MD5 hash' },
+        { label: 'Crypto.sha256', insertText: 'Crypto.sha256(${1:str})', isSnippet: true, detail: 'Compute SHA-256 hash' },
+        { label: 'Crypto.sha512', insertText: 'Crypto.sha512(${1:str})', isSnippet: true, detail: 'Compute SHA-512 hash' },
+        { label: 'Crypto.base64Encode', insertText: 'Crypto.base64Encode(${1:str})', isSnippet: true, detail: 'Encode string to Base64' },
+        { label: 'Crypto.base64Decode', insertText: 'Crypto.base64Decode(${1:str})', isSnippet: true, detail: 'Decode Base64 string' },
+
+        // Regex
+        { label: 'Regex.test', insertText: 'Regex.test(${1:pattern}, ${2:str})', isSnippet: true, detail: 'Test regex pattern against string' },
+        { label: 'Regex.match', insertText: 'Regex.match(${1:pattern}, ${2:str})', isSnippet: true, detail: 'Match regex pattern in string' },
+        { label: 'Regex.replace', insertText: 'Regex.replace(${1:str}, ${2:pattern}, ${3:replacement})', isSnippet: true, detail: 'Replace regex matches' },
+
+        // Fs
+        { label: 'Fs.read', insertText: 'Fs.read(${1:path})', isSnippet: true, detail: 'Read file contents' },
+        { label: 'Fs.write', insertText: 'Fs.write(${1:path}, ${2:content})', isSnippet: true, detail: 'Write file contents' },
+        { label: 'Fs.append', insertText: 'Fs.append(${1:path}, ${2:content})', isSnippet: true, detail: 'Append content to file' },
+        { label: 'Fs.exists', insertText: 'Fs.exists(${1:path})', isSnippet: true, detail: 'Check if file exists' },
+        { label: 'Fs.delete', insertText: 'Fs.delete(${1:path})', isSnippet: true, detail: 'Delete file' },
+        { label: 'Fs.list', insertText: 'Fs.list(${1:dir})', isSnippet: true, detail: 'List files in directory' },
+        { label: 'Fs.mkdir', insertText: 'Fs.mkdir(${1:dir})', isSnippet: true, detail: 'Create directory' },
+
+        // Path
+        { label: 'Path.join', insertText: 'Path.join(${1:p1}, ${2:p2})', isSnippet: true, detail: 'Join file path segments' },
+        { label: 'Path.dirname', insertText: 'Path.dirname(${1:path})', isSnippet: true, detail: 'Get directory name of path' },
+        { label: 'Path.basename', insertText: 'Path.basename(${1:path})', isSnippet: true, detail: 'Get base filename' },
+        { label: 'Path.extname', insertText: 'Path.extname(${1:path})', isSnippet: true, detail: 'Get file extension' },
+        { label: 'Path.resolve', insertText: 'Path.resolve(${1:path})', isSnippet: true, detail: 'Resolve absolute path' },
+
+        // Env
+        { label: 'Env.get', insertText: 'Env.get("${1:VAR_NAME}")', isSnippet: true, detail: 'Get environment variable value' },
+        { label: 'Env.set', insertText: 'Env.set("${1:VAR_NAME}", "${2:value}")', isSnippet: true, detail: 'Set environment variable' },
+        { label: 'Env.has', insertText: 'Env.has("${1:VAR_NAME}")', isSnippet: true, detail: 'Check if environment variable exists' },
+        { label: 'Env.all', insertText: 'Env.all()', detail: 'Get all environment variables' },
+
+        // Time
+        { label: 'Time.now', insertText: 'Time.now()', detail: 'Get current timestamp in milliseconds' },
+        { label: 'Time.sleep', insertText: 'Time.sleep(${1:ms})', isSnippet: true, detail: 'Sleep execution for milliseconds' },
+        { label: 'Time.format', insertText: 'Time.format(${1:timestamp}, "${2:YYYY-MM-DD}")', isSnippet: true, detail: 'Format timestamp string' },
+        { label: 'Time.diff', insertText: 'Time.diff(${1:t1}, ${2:t2})', isSnippet: true, detail: 'Time difference between two timestamps' },
+
+        // Http
+        { label: 'Http.get', insertText: 'Http.get("${1:https://api.example.com}")', isSnippet: true, detail: 'Perform HTTP GET request' },
+        { label: 'Http.post', insertText: 'Http.post("${1:https://api.example.com}", ${2:body})', isSnippet: true, detail: 'Perform HTTP POST request' },
+        { label: 'Http.put', insertText: 'Http.put("${1:https://api.example.com}", ${2:body})', isSnippet: true, detail: 'Perform HTTP PUT request' },
+        { label: 'Http.delete', insertText: 'Http.delete("${1:https://api.example.com}")', isSnippet: true, detail: 'Perform HTTP DELETE request' },
+
+        // Log
+        { label: 'Log.info', insertText: 'Log.info("${1:message}")', isSnippet: true, detail: 'Log informational message' },
+        { label: 'Log.warn', insertText: 'Log.warn("${1:warning}")', isSnippet: true, detail: 'Log warning message' },
+        { label: 'Log.error', insertText: 'Log.error("${1:error}")', isSnippet: true, detail: 'Log error message' },
+        { label: 'Log.debug', insertText: 'Log.debug("${1:debug}")', isSnippet: true, detail: 'Log debug message' },
+
+        // Color
+        { label: 'Color.ansi', insertText: 'Color.ansi("${1:text}", "${2:cyan}")', isSnippet: true, detail: 'Wrap text in ANSI color escape' },
+        { label: 'Color.hex', insertText: 'Color.hex("${1:text}", "#${2:00ffcc}")', isSnippet: true, detail: 'Wrap text in Truecolor hex ANSI escape' },
+        { label: 'Color.strip', insertText: 'Color.strip(${1:text})', isSnippet: true, detail: 'Strip all ANSI escape codes from text' },
+
+        // Console
+        { label: 'Console.clear', insertText: 'Console.clear()', detail: 'Clear terminal screen' },
+        { label: 'Console.read', insertText: 'Console.read()', detail: 'Read line from console stdin' },
+        { label: 'Console.write', insertText: 'Console.write("${1:text}")', isSnippet: true, detail: 'Write string to console without newline' },
+
+        // Benchmark
+        { label: 'Benchmark.run', insertText: 'Benchmark.run("${1:TestName}", ${2:fn})', isSnippet: true, detail: 'Benchmark execution duration of function' },
+        { label: 'Benchmark.profile', insertText: 'Benchmark.profile(${1:fn})', isSnippet: true, detail: 'Profile memory and operation counts' },
+
+        // Mock
+        { label: 'Mock.spy', insertText: 'Mock.spy(${1:obj}, "${2:method}")', isSnippet: true, detail: 'Create mock spy on method' },
+        { label: 'Mock.stub', insertText: 'Mock.stub(${1:obj}, "${2:method}", ${3:returnValue})', isSnippet: true, detail: 'Stub method return value' },
+
+        // Assert
+        { label: 'Assert.equal', insertText: 'Assert.equal(${1:actual}, ${2:expected})', isSnippet: true, detail: 'Assert values are equal' },
+        { label: 'Assert.true', insertText: 'Assert.true(${1:condition})', isSnippet: true, detail: 'Assert condition is true' },
+        { label: 'Assert.false', insertText: 'Assert.false(${1:condition})', isSnippet: true, detail: 'Assert condition is false' },
+        { label: 'Assert.throws', insertText: 'Assert.throws(${1:fn}, ${2:RuntimeError})', isSnippet: true, detail: 'Assert function throws expected error' },
+        { label: 'Assert.notEqual', insertText: 'Assert.notEqual(${1:a}, ${2:b})', isSnippet: true, detail: 'Assert values are not equal' }
+      ];
+
+      const suggestions = [
+        ...keywords.map(k => ({
+          label: k.label,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: k.insertText,
+          insertTextRules: k.isSnippet ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
+          detail: k.detail,
+          range
+        })),
+        ...attributes.map(a => ({
+          label: a.label,
+          kind: monaco.languages.CompletionItemKind.Property,
+          insertText: a.insertText,
+          insertTextRules: a.isSnippet ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
+          detail: a.detail,
+          range
+        })),
+        ...errors.map(e => ({
+          ...e,
+          range
+        })),
+        ...stdlibs.map(s => ({
+          label: s.label,
+          kind: monaco.languages.CompletionItemKind.Method,
+          insertText: s.insertText,
+          insertTextRules: s.isSnippet ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
+          detail: s.detail,
+          range
+        }))
+      ];
+
       return { suggestions };
+    }
+  });
+
+  // ─── MONACO HOVER PROVIDER FOR VERIPEDIA QUICK TOOLTIPS ───
+  monaco.languages.registerHoverProvider('verscript', {
+    provideHover: (model, position) => {
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+      const term = word.word;
+
+      const HOVER_DOCS = {
+        'display': '**display** statement\n\nPrints expressions to standard output.\n\nAttributes:\n- `?color="cyan"` or `?color=#00ffcc` - Colorized terminal output\n- `?newline=false` - Suppress trailing newline',
+        'prompt': '**prompt** statement\n\nReads a line of interactive text input into a variable.\n\nAttributes:\n- `?default="Val"` - Fallback default when input is empty',
+        'header': '**header** declaration\n\nDefines a typed interface contract in `.h.vrs` files.\n\nExample:\n```verscript\nheader MathService:\n    func add(a, b)\n```',
+        'include': '**include** directive\n\nIncludes a header contract file (`.h.vrs`). Validates that implementations match the contract signatures.',
+        'pragma': '**pragma** directive\n\nCompiler control directive:\n- `pragma once` - Prevent duplicate inclusion\n- `pragma strict` - Enforce type checking & contracts',
+        'struct': '**struct** declaration\n\nDefines a typed data structure schema with typed fields.',
+        'enum': '**enum** declaration\n\nDefines enumerated numerical constants.',
+        'Matrix': '**Matrix** Standard Library\n\nProvides linear algebra, determinant, inverse, transpose, solving systems, and matrix arithmetic.',
+        'Vector': '**Vector** Standard Library\n\nProvides Euclidean vectors, dot products, cross products, magnitude, and unit normalization.',
+        'Pseudo': '**Pseudo** Standard Library\n\nHigh-performance deterministic Pseudo-Random Number Generator with seedable state.',
+        'chan': '**chan** Concurrency Channel\n\nCreates a typed FIFO communication channel between async tasks.\n\nSyntax: `chan(capacity)`',
+        'send': '**send** operator\n\nPushes data into a concurrency channel.\n\nSyntax: `send ch <- value`',
+        'recv': '**recv** operator\n\nPulls data from a concurrency channel.\n\nSyntax: `recv var <- ch`',
+        'alias': '**alias** command\n\nRemaps keywords or commands with attribute substitution.\n\nSyntax: `alias display: print ? color=tint`',
+        'do': '**do ... unless** block\n\nVerScript exception handling and reactive watch block.',
+        'throw': '**throw** statement\n\nThrows a standard or custom error type with optional `?msg` and `?code` attributes.'
+      };
+
+      if (HOVER_DOCS[term]) {
+        return {
+          range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn),
+          contents: [{ value: HOVER_DOCS[term] }]
+        };
+      }
+      return null;
     }
   });
 };
 
-
 const TEMPLATES = {
+
+  headers_contracts: `!!
+  Template: Headers & Interface Contracts (.h.vrs)
+  Featuring pragma once, pragma strict, and structured data contracts!
+!!
+
+pragma once
+pragma strict
+
+struct UserProfile:
+    id: num
+    name: str
+    active: bool
+
+header AuthenticationService:
+    func verify(user: str, token: str)
+    func issueSession(profile: UserProfile)
+
+display "=== Header & Contract System Active ===" ?color="cyan"
+display "Pragmas and Struct definitions verified successfully." ?color="green"`,
+
+  matrix_linear_algebra: `!!
+  Template: Matrix & Vector Linear Algebra
+  Demonstrating Matrix.create, determinants, inverses, and direct operator overloading!
+!!
+
+load Matrix
+load Vector
+
+set A: [[2, 1], [5, 3]]
+set B: [[1, 2], [3, 4]]
+set V: [10, 20]
+
+display "=== Matrix Direct Infix Operations ===" ?color="cyan"
+display "A + B: " + (A + B) ?color="green"
+display "A * B: " + (A * B) ?color="yellow"
+display "A * V: " + (A * V) ?color="purple"
+display "det(A): " + (Matrix.det A) ?color="cyan"`,
+
+  concurrency_channels: `!!
+  Template: Concurrency Channels & Pipelines
+  Demonstrating async tasks, chan buffers, send and recv operations!
+!!
+
+set workChan: chan(5)
+
+send workChan <- "Task #1: Matrix computation"
+send workChan <- "Task #2: Crypto hash verification"
+
+display "=== Concurrency Pipeline ===" ?color="cyan"
+recv task1 <- workChan
+display "Dispatched: " + task1 ?color="green"
+recv task2 <- workChan
+display "Dispatched: " + task2 ?color="yellow"`,
+
+  structs_enums: `!!
+  Template: Typed Structs & Enum Mappings
+  Demonstrating custom schemas, enumerated values, and field validation!
+!!
+
+enum OrderStatus:
+    PENDING : 0
+    PAID : 1
+    SHIPPED : 2
+
+struct OrderRecord:
+    order_id: num
+    customer: str
+    status: num
+
+set my_order: OrderRecord(101, "Alice", OrderStatus.PAID)
+display "Order ID: " + my_order.order_id ?color="cyan"
+display "Customer: " + my_order.customer ?color="green"
+display "Status Code: " + my_order.status ?color="yellow"`,
   datatypes_pseudo: `!!
   Template: DataType Constraints & Native Pseudo PRNG
   Demonstrates custom types, parameter constraints, and PRNG engine!
@@ -702,6 +1066,12 @@ function App() {
   const [terminalHeight, setTerminalHeight] = useState(240);
   const [isResizing, setIsResizing] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('editor'); // 'editor' | 'ai' | 'terminal'
+
+  const [terminalTab, setTerminalTab] = useState('output'); // 'output' | 'stdin'
+  const [stdinInput, setStdinInput] = useState('');
+  const [pendingPrompt, setPendingPrompt] = useState(null); // { vname, defVal, resolve }
+  const [promptCurrentVal, setPromptCurrentVal] = useState('');
+
 
   const [files, setFiles] = useState([
     { name: 'sample.vrs', content: defaultSampleCode },
@@ -1323,6 +1693,37 @@ function App() {
   };
 
   // ─── Run Code via VS-Sharp /run endpoint ─────────────────────────
+  // ─── Export Project as ZIP ────────────────────────────────────────
+  const handleExportZip = () => {
+    try {
+      const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
+      const zipBytes = createZip(allFiles);
+      const blob = new Blob([zipBytes], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'verscript_project.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setOutput(prev => [...prev, { type: 'success', text: `📦 Exported ${allFiles.length} project files to verscript_project.zip` }]);
+    } catch (err) {
+      alert("Export failed: " + err.message);
+    }
+  };
+
+  // ─── Interactive In-Console Prompt Helper ─────────────────────────
+  const askTerminalPrompt = (vname, defVal) => {
+    return new Promise((resolve) => {
+      setTerminalTab('output');
+      setPromptCurrentVal(defVal || '');
+      setOutput(prev => [...prev, { type: 'cmd', text: `[?] Enter input for '${vname}' (default: "${defVal}"):` }]);
+      setPendingPrompt({ vname, defVal, resolve });
+    });
+  };
+
+  // ─── Run Code via VS-Sharp /run endpoint ─────────────────────────
   const handleRun = async () => {
     if (isRunning) return;
     const renamedActive = checkAndAutoRenameLib(activeFileName, code, files);
@@ -1333,20 +1734,26 @@ function App() {
       runName = renamedActive;
     }
     setIsRunning(true);
+    setTerminalTab('output');
     setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName}>` }]);
 
     try {
-      // Scan for prompt commands and gather user input interactively
-      const promptRegex = /prompt\s+([a-zA-Z0-9_]+)(?:\s+\?default="([^"]*)")?/g;
-      let pMatch;
-      let stdinData = '';
-      while ((pMatch = promptRegex.exec(code)) !== null) {
-        const vname = pMatch[1];
-        const defVal = pMatch[2] || '';
-        const entered = (typeof window !== 'undefined' && window.prompt) ? window.prompt(`[VerScript IDE] Enter input for '${vname}':`, defVal) : defVal;
-        const val = (entered !== null) ? entered : defVal;
-        stdinData += val + '\n';
-        setOutput(prev => [...prev, { type: 'system', text: `[prompt] ${vname} = ${val}` }]);
+      let stdinData = stdinInput || '';
+      
+      // If user hasn't pre-filled Stdin drawer, collect inputs interactively in-console
+      if (!stdinData.trim()) {
+        const promptRegex = /prompt\s+([a-zA-Z0-9_]+)(?:\s+\?default="([^"]*)")?/g;
+        let pMatch;
+        const promptMatches = [];
+        while ((pMatch = promptRegex.exec(code)) !== null) {
+          promptMatches.push({ vname: pMatch[1], defVal: pMatch[2] !== undefined ? pMatch[2] : '' });
+        }
+
+        for (const pm of promptMatches) {
+          const val = await askTerminalPrompt(pm.vname, pm.defVal);
+          stdinData += (val !== undefined && val !== null && val !== '' ? val : pm.defVal) + '\n';
+          setOutput(prev => [...prev, { type: 'system', text: `[prompt] ${pm.vname} = ${val || pm.defVal}` }]);
+        }
       }
 
       const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
@@ -1359,7 +1766,6 @@ function App() {
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
 
-      // Parse stdout lines
       if (data.output) {
         const lines = data.output.split('\n').filter(l => l !== '');
         lines.forEach(line => {
@@ -1368,7 +1774,6 @@ function App() {
         });
       }
 
-      // Any stderr / exec errors
       if (data.error && data.error.trim()) {
         data.error.trim().split('\n').forEach(line => {
           setOutput(prev => [...prev, { type: 'error', text: line }]);
@@ -1384,6 +1789,7 @@ function App() {
       ]);
     } finally {
       setIsRunning(false);
+      setPendingPrompt(null);
     }
   };
 
@@ -1455,6 +1861,9 @@ function App() {
 
           <button id="btnShare" className="btn" onClick={handleShareCode} title="Share code">
             🔗 Share
+          </button>
+          <button id="btnExportZip" className="btn" onClick={handleExportZip} title="Export project as ZIP">
+            📦 Export ZIP
           </button>
           <button
             id="btnRun"
@@ -1834,23 +2243,155 @@ function App() {
             style={{ height: terminalHeight }}
           >
             <div className="terminal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Terminal Output</span>
-              <button
-                id="btnClearTerminal"
-                onClick={handleClearTerminal}
-                style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.75rem' }}
-                title="Clear terminal"
-              >
-                clear
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className={`terminal-tab-btn ${terminalTab === 'output' ? 'active' : ''}`}
+                  onClick={() => setTerminalTab('output')}
+                  style={{
+                    background: terminalTab === 'output' ? 'rgba(0, 255, 204, 0.15)' : 'transparent',
+                    border: '1px solid ' + (terminalTab === 'output' ? '#00FFCC' : 'transparent'),
+                    color: terminalTab === 'output' ? '#00FFCC' : '#6272A4',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  🖥️ Output
+                </button>
+                <button
+                  type="button"
+                  className={`terminal-tab-btn ${terminalTab === 'stdin' ? 'active' : ''}`}
+                  onClick={() => setTerminalTab('stdin')}
+                  style={{
+                    background: terminalTab === 'stdin' ? 'rgba(189, 147, 249, 0.15)' : 'transparent',
+                    border: '1px solid ' + (terminalTab === 'stdin' ? '#BD93F9' : 'transparent'),
+                    color: terminalTab === 'stdin' ? '#BD93F9' : '#6272A4',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  📥 Stdin / Custom Input {stdinInput.trim() ? '●' : ''}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {terminalTab === 'stdin' ? (
+                  <button
+                    onClick={() => setStdinInput('')}
+                    style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.75rem' }}
+                    title="Clear Stdin"
+                  >
+                    clear input
+                  </button>
+                ) : (
+                  <button
+                    id="btnClearTerminal"
+                    onClick={handleClearTerminal}
+                    style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.75rem' }}
+                    title="Clear terminal"
+                  >
+                    clear
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="terminal-output" ref={terminalRef} style={{ display: 'flex', flexDirection: 'column' }}>
-              {output.map((line, i) => (
-                <div key={i} className={`terminal-line ${line.type}`}>
-                  {renderAnsiLine(line.text)}
-                </div>
-              ))}
-            </div>
+
+            {terminalTab === 'stdin' ? (
+              <div style={{ padding: '8px', height: 'calc(100% - 35px)', boxSizing: 'border-box' }}>
+                <textarea
+                  value={stdinInput}
+                  onChange={(e) => setStdinInput(e.target.value)}
+                  placeholder="Enter pre-filled standard input (stdin) lines here before running code. Each line will be consumed in order by 'prompt' commands..."
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: '#09090b',
+                    color: '#00ffcc',
+                    border: '1px solid #44475a',
+                    borderRadius: '4px',
+                    padding: '8px',
+                    fontFamily: "'Courier New', Courier, monospace",
+                    fontSize: '0.85rem',
+                    resize: 'none',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="terminal-output" ref={terminalRef} style={{ display: 'flex', flexDirection: 'column' }}>
+                {output.map((line, i) => (
+                  <div key={i} className={`terminal-line ${line.type}`}>
+                    {renderAnsiLine(line.text)}
+                  </div>
+                ))}
+
+                {pendingPrompt && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const val = promptCurrentVal;
+                      const res = pendingPrompt.resolve;
+                      setPendingPrompt(null);
+                      setPromptCurrentVal('');
+                      res(val);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 10px',
+                      margin: '6px 0',
+                      background: 'rgba(0, 255, 204, 0.08)',
+                      border: '1px solid #00ffcc',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <span style={{ color: '#00ffcc', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                      ? {pendingPrompt.vname}:
+                    </span>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={promptCurrentVal}
+                      onChange={(e) => setPromptCurrentVal(e.target.value)}
+                      placeholder={pendingPrompt.defVal ? `default: ${pendingPrompt.defVal}` : 'Type input value and press Enter...'}
+                      style={{
+                        flex: 1,
+                        background: '#09090b',
+                        border: '1px solid #44475a',
+                        borderRadius: '4px',
+                        color: '#f8f8f2',
+                        padding: '4px 8px',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="btn"
+                      style={{
+                        background: '#00ffcc',
+                        color: '#09090b',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '4px 10px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      Submit ↵
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Mobile Navigation Bar ── */}
