@@ -69,6 +69,7 @@ const handleEditorWillMount = (monaco) => {
       root: [
         [/[a-zA-Z_]\w*/, {
           cases: {
+            // Core keywords
             'display': 'keyword',
             'prompt': 'keyword',
             'true': 'keyword',
@@ -113,27 +114,13 @@ const handleEditorWillMount = (monaco) => {
             'class': 'keyword',
             'lib': 'keyword',
             'library': 'keyword',
+            'load': 'keyword',
+            'import': 'keyword',
             'static': 'keyword',
             'dynamic': 'keyword',
             'const': 'keyword',
             'public': 'keyword',
             'private': 'keyword',
-            'Pseudo': 'keyword',
-            'Random': 'keyword',
-            'seed': 'keyword',
-            'between': 'keyword',
-            'choice': 'keyword',
-            'shuffle': 'keyword',
-            'sample': 'keyword',
-            'boolean': 'keyword',
-            'uuid': 'keyword',
-            'name': 'keyword',
-            'email': 'keyword',
-            'alphaNumeric': 'keyword',
-            'DataTypeError': 'keyword',
-            'ScopeViolationError': 'keyword',
-            'ImmutableError': 'keyword',
-            'VisibilityError': 'keyword',
             'temp': 'keyword',
             'inst': 'keyword',
             'del': 'keyword',
@@ -152,13 +139,95 @@ const handleEditorWillMount = (monaco) => {
             'complete': 'keyword',
             'interval': 'keyword',
             'timeout': 'keyword',
+            'by': 'keyword',
+            'is': 'keyword',
+            'even': 'keyword',
+            'odd': 'keyword',
+            'isEven': 'keyword',
+            'isOdd': 'keyword',
+            'and': 'keyword',
+            'or': 'keyword',
+            'not': 'keyword',
+
+            // Header System & Pragmas & Structs
+            'header': 'keyword',
+            'include': 'keyword',
+            'pragma': 'keyword',
+            'once': 'keyword',
+            'strict': 'keyword',
+            'export': 'keyword',
+            'struct': 'keyword',
+            'enum': 'keyword',
+            'config': 'keyword',
+            'strict_mode': 'keyword',
+            'error_mode': 'keyword',
+            'timeout_ms': 'keyword',
+            'target_version': 'keyword',
+            'log_level': 'keyword',
+
+            // All 21 Standard Libraries
+            'Math': 'keyword',
+            'Matrix': 'keyword',
+            'Vector': 'keyword',
+            'Stats': 'keyword',
+            'Pseudo': 'keyword',
+            'Random': 'keyword',
+            'Arrays': 'keyword',
+            'Strings': 'keyword',
+            'Json': 'keyword',
+            'Validate': 'keyword',
+            'Crypto': 'keyword',
+            'Regex': 'keyword',
+            'Fs': 'keyword',
+            'Path': 'keyword',
+            'Env': 'keyword',
+            'Time': 'keyword',
+            'Http': 'keyword',
+            'Log': 'keyword',
+            'Color': 'keyword',
+            'Console': 'keyword',
+            'Benchmark': 'keyword',
+            'Mock': 'keyword',
+            'Assert': 'keyword',
+
+            // All 29 Standard Error Types
+            'MemoryAllocationError': 'keyword',
+            'UndefinedVariableError': 'keyword',
+            'InvalidOperandError': 'keyword',
+            'DivisionByZeroError': 'keyword',
+            'IndentationError': 'keyword',
+            'LoopIterationError': 'keyword',
+            'LoopLimitError': 'keyword',
+            'LoopDirectionError': 'keyword',
+            'LoopStepError': 'keyword',
+            'ScopeViolationError': 'keyword',
+            'SyntaxError': 'keyword',
+            'RuntimeError': 'keyword',
+            'InvalidErrorNameError': 'keyword',
+            'SystemError': 'keyword',
+            'VisibilityError': 'keyword',
+            'ImmutableError': 'keyword',
+            'IndexOutOfBoundsError': 'keyword',
+            'EntityError': 'keyword',
+            'FileError': 'keyword',
+            'DomainError': 'keyword',
+            'AssertError': 'keyword',
+            'DataTypeError': 'keyword',
+            'UnassignedVariableError': 'keyword',
+            'AsyncError': 'keyword',
+            'ChannelError': 'keyword',
+            'MatchError': 'keyword',
+            'OperationError': 'keyword',
+            'HeaderMismatchError': 'keyword',
+            'InvalidHeaderError': 'keyword',
+
             '@default': 'identifier'
           }
         }],
         [/[0-9]+/, 'number'],
         [/"([^"\\]|\\.)*"/, 'string'],
         [/![^\n]*/, 'comment'],
-        [/[+\-*/:=><]|x=|\|>/, 'operators']
+        [/[+\-*/:=><^!|&%?~]|x=|\|>|\/\/|::|->/, 'operators']
       ]
     }
   });
@@ -636,16 +705,18 @@ function App() {
 
   const [files, setFiles] = useState([
     { name: 'sample.vrs', content: defaultSampleCode },
-    { name: 'src/main.vrs', content: "!! Main script in src folder !!\ndisplay \"Running from src/main.vrs\" ?color=\"cyan\"\n" },
+    { name: 'include/math_service.h.vrs', content: "pragma once\npragma strict\n\nstruct Vec2:\n    x: num\n    y: num\n\nheader MathService:\n    func add(a, b)\n    func dot(x1, y1, x2, y2)\n" },
+    { name: 'src/main.vrs', content: 'include "include/math_service.h.vrs"\n\nfunc add(a, b):\n    reply a + b\n\nfunc dot(x1, y1, x2, y2):\n    reply (x1 * x2) + (y1 * y2)\n\nset p1: Vec2(3, 4)\nset p2: Vec2(5, 6)\ndisplay "Sum: " + add(p1.x, p2.x) ?color="green"\ndisplay "Dot Product: " + dot(p1.x, p1.y, p2.x, p2.y) ?color="cyan"\n' },
+    { name: 'linear_algebra.vrs', content: "! Symbolic Matrix & Vector Direct Operations\nload Matrix\nload Vector\n\nset M1: [[1, 2], [3, 4]]\nset M2: [[5, 6], [7, 8]]\nset V1: [10, 20]\n\ndisplay \"M1 + M2: \" + (M1 + M2) ?color=\"cyan\"\ndisplay \"M1 * V1: \" + (M1 * V1) ?color=\"green\"\n" },
     { name: 'core/Math.lib.vrs', content: "! VerScript Core Library: Math\nlib Math\n  dynamic:\n    def func abs x\n      if x < 0 then\n        reply 0 - x\n      reply x\n    def func gcd a b\n      set x: (abs a)\n      set y: (abs b)\n      while y != 0\n        set temp: y\n        set q: x / y\n        set y: x - (q * y)\n        set x: temp\n      reply x\n" },
     { name: 'tests/test_step.vrs', content: "!! Test step loop !!\niterate i from 1 to 10 step 3\n  display \"Step test: \" + i ?color=\"yellow\"\n" }
   ]);
-  const [folders, setFolders] = useState(['src', 'core', 'tests']);
+  const [folders, setFolders] = useState(['src', 'include', 'core', 'tests']);
   const [collapsedFolders, setCollapsedFolders] = useState({});
   const [targetFolder, setTargetFolder] = useState('');
   const [activeFileName, setActiveFileName] = useState('sample.vrs');
   const [searchQuery, setSearchQuery] = useState('');
-  const [extensionFilter, setExtensionFilter] = useState('all'); // 'all' | '.vrs' | '.lib.vrs'
+  const [extensionFilter, setExtensionFilter] = useState('all'); // 'all' | '.vrs' | '.lib.vrs' | '.h.vrs'
   const [newFileName, setNewFileName] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
@@ -1049,7 +1120,8 @@ function App() {
   const matchesExtFilter = (fileName) => {
     if (extensionFilter === 'all') return true;
     if (extensionFilter === '.lib.vrs') return fileName.endsWith('.lib.vrs');
-    if (extensionFilter === '.vrs') return fileName.endsWith('.vrs') && !fileName.endsWith('.lib.vrs');
+    if (extensionFilter === '.h.vrs') return fileName.endsWith('.h.vrs');
+    if (extensionFilter === '.vrs') return fileName.endsWith('.vrs') && !fileName.endsWith('.lib.vrs') && !fileName.endsWith('.h.vrs');
     return true;
   };
 
@@ -1122,6 +1194,8 @@ function App() {
     if (!name.endsWith('.vrs')) {
       if (name.endsWith('.lib')) {
         name += '.vrs';
+      } else if (name.endsWith('.h')) {
+        name += '.vrs';
       } else {
         name += '.vrs';
       }
@@ -1130,9 +1204,13 @@ function App() {
       alert('A file with this name already exists!');
       return;
     }
+    const isHeader = name.endsWith('.h.vrs');
     const isLib = name.endsWith('.lib.vrs');
+    const baseHeaderName = isHeader ? name.split('/').pop().replace('.h.vrs', '') : '';
     const baseLibName = isLib ? name.split('/').pop().replace('.lib.vrs', '') : '';
-    const initialContent = isLib
+    const initialContent = isHeader
+      ? `pragma once\npragma strict\n\nheader ${baseHeaderName}:\n    func example(a, b)\n`
+      : isLib
       ? `! VerScript Library: ${baseLibName}\nlib ${baseLibName}\n  const:\n    version: "1.0.0"\n  dynamic:\n    def func example\n      reply 42\n`
       : `! VerScript ${name}\n`;
 
@@ -1258,10 +1336,11 @@ function App() {
     setOutput(prev => [...prev, { type: 'cmd', text: `VerScript ${runName}>` }]);
 
     try {
+      const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
       const res = await fetch(`${VS_SHARP_API}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, files: allFiles })
       });
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -1448,6 +1527,25 @@ function App() {
               >
                 .lib.vrs
               </button>
+              <button
+                type="button"
+                className={`filter-btn ${extensionFilter === '.h.vrs' ? 'active' : ''}`}
+                onClick={() => setExtensionFilter('.h.vrs')}
+                style={{
+                  flex: 1.2,
+                  padding: '3px 4px',
+                  fontSize: '0.72rem',
+                  borderRadius: '4px',
+                  border: '1px solid ' + (extensionFilter === '.h.vrs' ? '#FFB86C' : '#44475A'),
+                  background: extensionFilter === '.h.vrs' ? 'rgba(255, 184, 108, 0.25)' : 'transparent',
+                  color: extensionFilter === '.h.vrs' ? '#FFB86C' : '#6272A4',
+                  cursor: 'pointer',
+                  fontWeight: extensionFilter === '.h.vrs' ? '600' : 'normal'
+                }}
+                title="Headers (.h.vrs)"
+              >
+                .h.vrs
+              </button>
             </div>
           </div>
           <div style={{ padding: '0 10px', marginTop: '10px' }}>
@@ -1499,11 +1597,15 @@ function App() {
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {file.name}
                   </span>
-                  {file.name.endsWith('.lib.vrs') && (
+                  {file.name.endsWith('.h.vrs') ? (
+                    <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(255, 184, 108, 0.25)', color: '#FFB86C', marginRight: '4px', fontWeight: 'bold' }}>
+                      HDR
+                    </span>
+                  ) : file.name.endsWith('.lib.vrs') ? (
                     <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(139, 233, 253, 0.2)', color: '#8BE9FD', marginRight: '4px', fontWeight: 'bold' }}>
                       LIB
                     </span>
-                  )}
+                  ) : null}
                   <button
                     className="btn-delete-file"
                     onClick={(e) => handleDeleteFile(file.name, e)}
@@ -1563,11 +1665,15 @@ function App() {
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                             {file.name.replace(folder + '/', '')}
                           </span>
-                          {file.name.endsWith('.lib.vrs') && (
+                          {file.name.endsWith('.h.vrs') ? (
+                            <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(255, 184, 108, 0.25)', color: '#FFB86C', marginRight: '4px', fontWeight: 'bold' }}>
+                              HDR
+                            </span>
+                          ) : file.name.endsWith('.lib.vrs') ? (
                             <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(139, 233, 253, 0.2)', color: '#8BE9FD', marginRight: '4px', fontWeight: 'bold' }}>
                               LIB
                             </span>
-                          )}
+                          ) : null}
                           <button
                             className="btn-delete-file"
                             onClick={(e) => handleDeleteFile(file.name, e)}
