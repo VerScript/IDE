@@ -3,12 +3,10 @@
 //  Features: Progressive line-by-line output & In-Code Interactive Prompt
 // ═══════════════════════════════════════════════════════════════════
 
-let __seedState = 12345;
-
 export function evalSimpleExpr(expr, vars) {
     let result = expr.trim();
     if (/^"(?:[^"\\]|\\.)*"$/.test(result)) {
-        try { return JSON.parse(result); } catch (e) { return result.slice(1, -1); }
+        try { return JSON.parse(result); } catch { return result.slice(1, -1); }
     }
 
     // Replace variable names
@@ -41,17 +39,17 @@ export function evalSimpleExpr(expr, vars) {
         result = result.replace(/\|([^|]+)\|/g, 'Math.abs($1)');
 
         // Postfix Factorial x! -> __fact(x)
-        result = result.replace(/([0-9a-zA-Z_\)]+)!/g, '(__fact($1))');
+        result = result.replace(/([0-9a-zA-Z_)]+)!/g, '(__fact($1))');
 
         // Exponentiation ^ -> **
         result = result.replace(/\^/g, '**');
 
         // Integer division // -> Math.floor(a / b)
-        result = result.replace(/([0-9a-zA-Z_\.\(\)]+)\s*\/\/\s*([0-9a-zA-Z_\.\(\)]+)/g, 'Math.floor(($1) / ($2))');
+        result = result.replace(/([0-9a-zA-Z_.()]+)\s*\/\/\s*([0-9a-zA-Z_.()]+)/g, 'Math.floor(($1) / ($2))');
 
         // Roots
-        result = result.replace(/(?<!\.)(?:sqrt|√)\s*([0-9a-zA-Z_\.\(\)]+)/g, 'Math.sqrt($1)');
-        result = result.replace(/(?<!\.)\brt\s+([0-9a-zA-Z_\.\(\)]+)\s+([0-9a-zA-Z_\.\(\)]+)/g, 'Math.pow($2, 1 / ($1))');
+        result = result.replace(/(?<!\.)(?:sqrt|√)\s*([0-9a-zA-Z_.()]+)/g, 'Math.sqrt($1)');
+        result = result.replace(/(?<!\.)\brt\s+([0-9a-zA-Z_.()]+)\s+([0-9a-zA-Z_.()]+)/g, 'Math.pow($2, 1 / ($1))');
 
         // Min, Max, Clamping
         result = result.replace(/(?<!\.)\bclamp\s+([^\s]+)\s+from\s+([^\s]+)\s+to\s+([^\s]+)/g, 'Math.min(Math.max($1, $2), $3)');
@@ -65,8 +63,8 @@ export function evalSimpleExpr(expr, vars) {
 
         // Signum & Parity
         result = result.replace(/(?<!\.)\b(sign|sgn)\s+([^\s]+)/g, 'Math.sign($2)');
-        result = result.replace(/([0-9a-zA-Z_\.\(\)]+)\s+is\s+even\b/g, '(($1) % 2 === 0)');
-        result = result.replace(/([0-9a-zA-Z_\.\(\)]+)\s+is\s+odd\b/g, '(($1) % 2 !== 0)');
+        result = result.replace(/([0-9a-zA-Z_.()]+)\s+is\s+even\b/g, '(($1) % 2 === 0)');
+        result = result.replace(/([0-9a-zA-Z_.()]+)\s+is\s+odd\b/g, '(($1) % 2 !== 0)');
         result = result.replace(/(?<!\.)\b(isEven|even)\s+([^\s]+)/g, '(($2) % 2 === 0)');
         result = result.replace(/(?<!\.)\b(isOdd|odd)\s+([^\s]+)/g, '(($2) % 2 !== 0)');
 
@@ -136,11 +134,12 @@ export function evalSimpleExpr(expr, vars) {
         result = result.replace(/\bor\b/g, ' || ');
         result = result.replace(/\bnot\b/g, ' ! ');
 
-        const clean = result.replace(/[^0-9a-zA-Z_\s\+\-\*\/\(\)\[\]\"\'\.\,\:\=\>\<\!\&\|\%]/g, '');
+        const clean = result.replace(/[^0-9a-zA-Z_\s+\-*/()[\]"'.,:=><!&|%]/g, '');
         const factHelper = `
+            globalThis.__seedState = globalThis.__seedState || 12345;
             function __fact(n){ let r=1; for(let i=2;i<=n;i++)r*=i; return r; }
-            function __setSeed(s){ __seedState = Number(s) || 1; return 0; }
-            function __rng(){ __seedState = (__seedState * 1103515245 + 12345) & 0x7fffffff; return __seedState; }
+            function __setSeed(s){ globalThis.__seedState = Number(s) || 1; return 0; }
+            function __rng(){ globalThis.__seedState = (globalThis.__seedState * 1103515245 + 12345) & 0x7fffffff; return globalThis.__seedState; }
             function __between(min, max){ let a=Number(min), b=Number(max); if(a>b){let t=a; a=b; b=t;} return a + (__rng() % (b - a + 1)); }
             function __choice(arr){ if(!Array.isArray(arr) || !arr.length) return ""; return arr[__rng() % arr.length]; }
             function __shuffle(arr){ if(!Array.isArray(arr)) return []; const c=[...arr]; for(let i=c.length-1;i>0;i--){ const j=__rng()%(i+1); [c[i],c[j]]=[c[j],c[i]]; } return c; }
@@ -264,7 +263,7 @@ export function evalSimpleExpr(expr, vars) {
 
             const Json = {
                 stringify: (d) => JSON.stringify(d),
-                parse: (s) => { try { return JSON.parse(s); } catch(e) { return s; } },
+                parse: (s) => { try { return JSON.parse(s); } catch { return s; } },
                 isValid: (s) => {
                     if (typeof s !== "string") return false;
                     const t = s.trim();
@@ -330,7 +329,7 @@ export function evalSimpleExpr(expr, vars) {
             return JSON.stringify(evaluated);
         }
         return evaluated;
-    } catch (e) {
+    } catch {
         return result.replace(/^"|"$/g, '');
     }
 }
@@ -425,7 +424,6 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
             if (line.startsWith('display ') || line === 'display') {
                 let colMatch = line.match(/\?color=(?:#([0-9a-fA-F]{3,8})|"([^"]*)"|'([^']*)'|([a-zA-Z0-9_#]+))/);
                 let colorVal = colMatch ? (colMatch[1] ? ('#' + colMatch[1]) : (colMatch[2] || colMatch[3] || colMatch[4])) : null;
-                let isInline = line.includes('?inline') || /\?newline=(?:false|0|"false")/.test(line);
                 let expr = line.length > 8 ? line.substring(8).trim() : '';
                 expr = expr.replace(/\?[a-zA-Z_]+(?:=(?:"[^"]*"|'[^']*'|[^\s]+))?/g, '').trim();
                 let evaluated = evalSimpleExpr(expr, vars);
