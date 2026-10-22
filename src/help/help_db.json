@@ -1004,44 +1004,41 @@
     "example": "set fuelLevel : 10\nwhen fuelLevel < 15:\n  display \"LOW FUEL: Refuel required immediately.\" ?color=#f59e0b"
   },
   {
-    "id": "kw-datatype",
+    "id": "datatype",
     "name": "DataType",
-    "category": "keyword",
-    "subcategory": "Type System & Schema",
-    "title": "DataType — Constrained Custom Types",
-    "summary": "Declares a formal user-defined type with validation constraints, invariant bounds, and schema contracts.",
-    "syntax": "DataType <TypeName>:\n  <field1> : <type>\n  [guard <constraint>]",
-    "functionalities": [
-      {
-        "title": "Constrained Data Schema",
-        "desc": "Creates structured records that enforce field types and invariant ranges.",
-        "code": "DataType PortNumber:\n  value : num\n  guard value >= 1 and value <= 65535\n\nset PortNumber webPort : 8080"
-      }
-    ],
-    "pairedWith": [
-      "guard",
-      "set",
-      "def",
-      "class"
-    ],
+    "category": "datatype",
+    "subcategory": "Constrained Types",
+    "summary": "Defines a custom named datatype with runtime validation constraints and invariant predicates.",
+    "syntax": "DataType <TypeName>:\n  guard <expression_with_it>\n\nDataType <Port>:\n  guard it >= 1 && it <= 65535",
+    "details": "The `DataType` construct enables domain-driven type invariants. Any assignment to a variable annotated with this type verifies the `guard` rule against `it` and throws `DataTypeError` upon violation.",
     "parameters": [
       {
         "name": "TypeName",
         "type": "identifier",
-        "desc": "Name of the custom type."
+        "description": "Name of the constrained custom type."
+      },
+      {
+        "name": "guard",
+        "type": "boolean expression using it",
+        "description": "Validation invariant."
       }
     ],
-    "returns": "Type constructor.",
+    "return_type": "DataType",
+    "paired_keywords": [
+      "guard",
+      "it",
+      "set",
+      "throw"
+    ],
+    "example": "DataType PositiveNum:\n  guard it > 0\n\nset PositiveNum count : 5\n! set PositiveNum err : -1  (Throws DataTypeError)",
     "tags": [
       "datatype",
-      "type",
-      "typedef",
-      "schema",
-      "struct",
       "constraint",
-      "validation"
-    ],
-    "example": "DataType UserProfile:\n  username : str\n  age : num\n  guard age >= 18\n\nset UserProfile admin : { username: \"root\", age: 32 }"
+      "invariant",
+      "guard",
+      "it",
+      "domain-types"
+    ]
   },
   {
     "id": "kw-alias",
@@ -2203,94 +2200,172 @@
     ]
   },
   {
-    "id": "kw-num",
+    "id": "num",
     "name": "num",
-    "category": "keyword",
+    "category": "datatype",
     "subcategory": "Primitive Types",
-    "title": "num — VerScript Language Keyword",
-    "summary": "Double-precision IEEE 754 64-bit floating point numeric data type.",
-    "syntax": "set num <name> : <number>",
-    "returns": "void / value",
-    "example": "set num pi : 3.14159265",
+    "summary": "64-bit IEEE 754 double-precision floating point numeric value, representing integers and decimals seamlessly.",
+    "syntax": "set num <name> : <numeric_literal>\nstr a : \"42\"\nset num parsed : a as num",
+    "details": "The `num` type in VerScript represents both integer and fractional floating point values. It supports standard arithmetic operators (+, -, *, /, %), bitwise operations, mathematical functions in the Math library, and automatic type inference.",
+    "parameters": [
+      {
+        "name": "literal",
+        "type": "integer or float",
+        "description": "Any decimal representation, e.g. 42, -10, 3.14159, 1e-4."
+      }
+    ],
+    "return_type": "num",
+    "paired_keywords": [
+      "DataType",
+      "as",
+      "set",
+      "Math"
+    ],
+    "example": "set num count : 10\nset num price : 19.99\nset num total : count * price\ndisplay \"Total: \" + total ?color=cyan",
     "tags": [
       "num",
       "number",
+      "int",
       "float",
-      "integer",
       "double",
+      "datatype",
+      "primitive",
       "math"
     ]
   },
   {
-    "id": "kw-str",
+    "id": "str",
     "name": "str",
-    "category": "keyword",
+    "category": "datatype",
     "subcategory": "Primitive Types",
-    "title": "str — VerScript Language Keyword",
-    "summary": "UTF-8 string character sequence with rich built-in string methods.",
-    "syntax": "set str <name> : \"text\"",
-    "returns": "void / value",
-    "example": "set str greeting : \"Hello\"",
+    "summary": "UTF-8 encoded string sequence with built-in string methods (.length, .substring, .toUpper, etc.).",
+    "syntax": "set str <name> : \"string content\"\nstr multiline : \"Line 1\\nLine 2\"",
+    "details": "VerScript strings are immutable UTF-8 text sequences. They support dynamic concatenation with the `+` operator, indexing, slicing, safe navigation, and rich methods such as `.split()`, `.trim()`, `.replace()`, and `.indexOf()`.",
+    "parameters": [
+      {
+        "name": "literal",
+        "type": "text sequence",
+        "description": "Double-quoted string with escape sequences (\\n, \\t, \\\", \\\\)."
+      }
+    ],
+    "return_type": "str",
+    "paired_keywords": [
+      "display",
+      "prompt",
+      "as",
+      "String"
+    ],
+    "example": "set str name : \"VerScript\"\nset str greeting : \"Hello \" + name\ndisplay greeting.toUpper()",
     "tags": [
       "str",
       "string",
       "text",
       "utf8",
-      "words"
+      "datatype",
+      "primitive",
+      "char"
     ]
   },
   {
-    "id": "kw-bool",
+    "id": "bool",
     "name": "bool",
-    "category": "keyword",
+    "category": "datatype",
     "subcategory": "Primitive Types",
-    "title": "bool — VerScript Language Keyword",
-    "summary": "Boolean truth value: true or false.",
+    "summary": "Boolean truth flag literal accepting either true or false.",
     "syntax": "set bool <name> : true | false",
-    "returns": "void / value",
-    "example": "set bool isReady : true",
+    "details": "Used across all conditional control flow branches (if, unless, while, until, match). Boolean expressions evaluate comparison operations (==, !=, <, >, <=, >=) and logical combinations (&&, ||, !).",
+    "parameters": [
+      {
+        "name": "value",
+        "type": "boolean",
+        "description": "Keyword true or false."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "if",
+      "while",
+      "until",
+      "unless",
+      "guard"
+    ],
+    "example": "set bool active : true\nif active then:\n  display \"System is online!\" ?color=green",
     "tags": [
       "bool",
       "boolean",
       "true",
       "false",
-      "flag"
+      "datatype",
+      "flag",
+      "primitive"
     ]
   },
   {
-    "id": "kw-arr",
+    "id": "arr",
     "name": "arr",
-    "category": "keyword",
-    "subcategory": "Primitive Types",
-    "title": "arr — VerScript Language Keyword",
-    "summary": "Dynamic heterogeneous array collection with fast indexing and operations.",
-    "syntax": "set arr <name> : [item1, item2, ...]",
-    "returns": "void / value",
-    "example": "set arr numbers : [10, 20, 30]",
+    "category": "datatype",
+    "subcategory": "Collections",
+    "summary": "Dynamically sized heterogeneous linear collection supporting indexed access, push/pop, and slice operations.",
+    "syntax": "set arr <name> : [<elem1>, <elem2>, ...]\nset <elem> : <name>[<index>]",
+    "details": "Arrays hold an ordered list of elements of any type. They support indexing with zero-based integer offsets, length querying with `arr.length`, functional pipelines, and iteration loops.",
+    "parameters": [
+      {
+        "name": "elements",
+        "type": "comma-separated values",
+        "description": "Elements enclosed within square brackets []."
+      }
+    ],
+    "return_type": "arr",
+    "paired_keywords": [
+      "cycle",
+      "loop",
+      "iterate",
+      "Array",
+      "in"
+    ],
+    "example": "set arr items : [1, \"two\", 3.0, true]\nitems.push(50)\ndisplay \"Length: \" + items.length\ndisplay items[1]",
     "tags": [
       "arr",
       "array",
       "list",
+      "collection",
+      "datatype",
       "vector",
-      "collection"
+      "index"
     ]
   },
   {
-    "id": "kw-entity",
+    "id": "entity",
     "name": "entity",
-    "category": "keyword",
-    "subcategory": "Primitive Types",
-    "title": "entity — VerScript Language Keyword",
-    "summary": "Key-value mapping table / dynamic object dictionary.",
-    "syntax": "set entity <name> : { key: val }",
-    "returns": "void / value",
-    "example": "set entity user : { name: \"Alex\", role: \"Dev\" }",
+    "category": "datatype",
+    "subcategory": "Object Orientation",
+    "summary": "Dynamic object record or instantiated class/library instance holding bound methods and member fields.",
+    "syntax": "set entity <name> : <ClassOrLibName>(<args...>)\nset <name>.<prop> : <val>",
+    "details": "Entities represent stateful object instances. They can be created from `class` blueprints, `lib` modules with constructors, or dynamic property maps. Entity members are accessed via the dot `.` operator.",
+    "parameters": [
+      {
+        "name": "constructor",
+        "type": "Class or Lib invocation",
+        "description": "Invocation of a class or library with constructor parameters."
+      }
+    ],
+    "return_type": "entity",
+    "paired_keywords": [
+      "class",
+      "lib",
+      "construct",
+      "this",
+      "inst"
+    ],
+    "example": "class Point x y:\n  construct:\n    set this.x : x\n    set this.y : y\n\nset p : Point(10, 20)\ndisplay p.x + \", \" + p.y",
     "tags": [
       "entity",
       "object",
-      "dictionary",
-      "map",
-      "hash"
+      "instance",
+      "class",
+      "struct",
+      "datatype",
+      "oop"
     ]
   },
   {
@@ -3193,6 +3268,1023 @@
       "library",
       "stdlib",
       "module"
+    ]
+  },
+  {
+    "id": "any",
+    "name": "any",
+    "category": "datatype",
+    "subcategory": "Variant Type",
+    "summary": "Unconstrained polymorphic variant type bypassing strict compile-time type validation.",
+    "syntax": "set any <name> : <value>",
+    "details": "The `any` datatype allows a variable to hold any value (num, str, bool, arr, entity) and be dynamically reassigned to other types at runtime without triggering a DataTypeError.",
+    "parameters": [
+      {
+        "name": "value",
+        "type": "any expression",
+        "description": "Any valid VerScript expression."
+      }
+    ],
+    "return_type": "any",
+    "paired_keywords": [
+      "DataType",
+      "as",
+      "set"
+    ],
+    "example": "set any dynamicVal : 42\nset dynamicVal : \"Now I am a string\"\ndisplay dynamicVal",
+    "tags": [
+      "any",
+      "variant",
+      "dynamic",
+      "unconstrained",
+      "datatype",
+      "polymorphic"
+    ]
+  },
+  {
+    "id": "void",
+    "name": "void",
+    "category": "datatype",
+    "subcategory": "Function Signatures",
+    "summary": "Designates that a routine performs side-effects and returns no meaningful value.",
+    "syntax": "def func <name>(<params>) -> void:\n  <body>",
+    "details": "Used primarily in header contract files (*.h.vrs) and explicit function signatures to indicate procedure calls that reply nothing.",
+    "parameters": [],
+    "return_type": "void",
+    "paired_keywords": [
+      "def",
+      "func",
+      "reply",
+      "header"
+    ],
+    "example": "header LoggerContract:\n  def func logMessage(msg: str) -> void\n\ninclude \"LoggerContract.h.vrs\"",
+    "tags": [
+      "void",
+      "none",
+      "empty",
+      "signature",
+      "datatype",
+      "return"
+    ]
+  },
+  {
+    "id": "nil",
+    "name": "nil",
+    "category": "datatype",
+    "subcategory": "Literals",
+    "summary": "Represents the intentional absence of any value or uninitialized object reference.",
+    "syntax": "set <name> : nil\nif <name> == nil then: ...",
+    "details": "`nil` (or `null`) represents null pointers and absent values. Safe navigation `?.` and nullish coalescing `??` operators are designed specifically to handle `nil` references safely.",
+    "parameters": [],
+    "return_type": "nil",
+    "paired_keywords": [
+      "null",
+      "??",
+      "?.",
+      "if"
+    ],
+    "example": "set user : nil\nset name : user?.name ?? \"Anonymous\"\ndisplay name",
+    "tags": [
+      "nil",
+      "null",
+      "absent",
+      "empty",
+      "datatype",
+      "optional"
+    ]
+  },
+  {
+    "id": "header",
+    "name": "header",
+    "category": "keyword",
+    "subcategory": "Header Contracts",
+    "summary": "Defines an interface contract specification declaring prototypes and type constraints in *.h.vrs files.",
+    "syntax": "header <ContractName>:\n  def func <routineName>(<params>): <return_type>\n  struct <StructName>:\n    <field> : <type>",
+    "details": "Header specifications enforce compile-time and runtime contracts between callers and implementations. Companion headers (<file>.h.vrs) are automatically detected and verified against implementations (<file>.vrs).",
+    "parameters": [
+      {
+        "name": "ContractName",
+        "type": "identifier",
+        "description": "Name of the header specification block."
+      }
+    ],
+    "return_type": "Contract Definition",
+    "paired_keywords": [
+      "include",
+      "contract",
+      "require",
+      "ensure",
+      "struct",
+      "def"
+    ],
+    "example": "header MathSpec:\n  def func add(a: num, b: num): num\n  def func mul(a: num, b: num): num",
+    "tags": [
+      "header",
+      "contract",
+      "interface",
+      "prototype",
+      "specification",
+      "h.vrs"
+    ]
+  },
+  {
+    "id": "contract",
+    "name": "contract",
+    "category": "keyword",
+    "subcategory": "Header Contracts",
+    "summary": "Declares an invariant behavioral specification for functions, structs, or libraries.",
+    "syntax": "contract <Name>:\n  require: <precondition>\n  ensure: <postcondition>",
+    "details": "Enforces Design by Contract (DbC). Contracts guarantee preconditions before routines execute and postconditions after return.",
+    "parameters": [
+      {
+        "name": "Name",
+        "type": "identifier",
+        "description": "Name of the contract specification."
+      }
+    ],
+    "return_type": "Contract Block",
+    "paired_keywords": [
+      "header",
+      "require",
+      "ensure",
+      "inbound",
+      "outbound"
+    ],
+    "example": "contract SafeDivision:\n  require: denominator != 0\n  ensure: it != nil",
+    "tags": [
+      "contract",
+      "dbc",
+      "invariant",
+      "precondition",
+      "postcondition",
+      "header"
+    ]
+  },
+  {
+    "id": "require",
+    "name": "require",
+    "category": "keyword",
+    "subcategory": "Header Contracts",
+    "summary": "Specifies a precondition predicate that must evaluate to true prior to executing a routine.",
+    "syntax": "require: <boolean_condition>",
+    "details": "If the `require` predicate evaluates to false or 0 upon entering a routine, the runtime immediately throws a `PreconditionViolationError`.",
+    "parameters": [
+      {
+        "name": "condition",
+        "type": "bool",
+        "description": "Precondition assertion expression."
+      }
+    ],
+    "return_type": "void",
+    "paired_keywords": [
+      "ensure",
+      "contract",
+      "header",
+      "inbound"
+    ],
+    "example": "def func withdraw(amount: num):\n  require: amount > 0 && amount <= this.balance\n  set this.balance : this.balance - amount",
+    "tags": [
+      "require",
+      "precondition",
+      "contract",
+      "assertion",
+      "guard",
+      "header"
+    ]
+  },
+  {
+    "id": "ensure",
+    "name": "ensure",
+    "category": "keyword",
+    "subcategory": "Header Contracts",
+    "summary": "Specifies a postcondition predicate that must evaluate to true after routine completion before returning to caller.",
+    "syntax": "ensure: <boolean_condition_using_it>",
+    "details": "Validates return values (accessible via `it`) and state postconditions. A false condition raises `PostconditionViolationError`.",
+    "parameters": [
+      {
+        "name": "condition",
+        "type": "bool expression using it",
+        "description": "Postcondition assertion predicate."
+      }
+    ],
+    "return_type": "void",
+    "paired_keywords": [
+      "require",
+      "contract",
+      "header",
+      "outbound",
+      "it"
+    ],
+    "example": "def func abs(x: num):\n  ensure: it >= 0\n  if x < 0 then: reply -x else: reply x",
+    "tags": [
+      "ensure",
+      "postcondition",
+      "contract",
+      "assertion",
+      "it",
+      "header"
+    ]
+  },
+  {
+    "id": "include",
+    "name": "include",
+    "category": "keyword",
+    "subcategory": "Header Contracts",
+    "summary": "Explicitly imports and binds an external *.h.vrs header contract specification into the current compilation unit.",
+    "syntax": "include \"<path_to_header>.h.vrs\"",
+    "details": "Loads header prototypes and validates all function implementations against declared signatures.",
+    "parameters": [
+      {
+        "name": "headerPath",
+        "type": "string",
+        "description": "Relative or absolute file path to the *.h.vrs file."
+      }
+    ],
+    "return_type": "void",
+    "paired_keywords": [
+      "header",
+      "contract",
+      "import",
+      "load"
+    ],
+    "example": "include \"math_contract.h.vrs\"\n\ndef func add(a: num, b: num):\n  reply a + b",
+    "tags": [
+      "include",
+      "header",
+      "contract",
+      "import",
+      "prototype",
+      "h.vrs"
+    ]
+  },
+  {
+    "id": "op_plus",
+    "name": "+ (Addition / Concat)",
+    "category": "operator",
+    "subcategory": "Arithmetic & Strings",
+    "summary": "Adds numeric values, concatenates strings, or appends elements to arrays.",
+    "syntax": "<a> + <b>",
+    "details": "Polymorphic operator: (1) Numeric addition: 5 + 3 = 8, (2) String concatenation: \"Hello \" + \"World\", (3) Array union: [1, 2] + [3, 4].",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "num | str | arr",
+        "description": "Left operand."
+      },
+      {
+        "name": "b",
+        "type": "num | str | arr",
+        "description": "Right operand."
+      }
+    ],
+    "return_type": "num | str | arr",
+    "paired_keywords": [
+      "-",
+      "*",
+      "/",
+      "%"
+    ],
+    "example": "set n : 10 + 25\nset msg : \"Total count: \" + n\ndisplay msg",
+    "tags": [
+      "+",
+      "plus",
+      "add",
+      "addition",
+      "concat",
+      "concatenation",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_minus",
+    "name": "- (Subtraction / Negation)",
+    "category": "operator",
+    "subcategory": "Arithmetic",
+    "summary": "Subtracts the right numeric operand from the left operand, or negates a numeric expression as unary minus.",
+    "syntax": "<a> - <b>\n-<expression>",
+    "details": "Binary subtraction (e.g. 10 - 4 = 6) and unary negation (e.g. -x).",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "num",
+        "description": "Minuend."
+      },
+      {
+        "name": "b",
+        "type": "num",
+        "description": "Subtrahend."
+      }
+    ],
+    "return_type": "num",
+    "paired_keywords": [
+      "+",
+      "*",
+      "/"
+    ],
+    "example": "set diff : 100 - 35\nset inv : -diff\ndisplay inv",
+    "tags": [
+      "-",
+      "minus",
+      "subtract",
+      "subtraction",
+      "negation",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_multiply",
+    "name": "* (Multiplication)",
+    "category": "operator",
+    "subcategory": "Arithmetic",
+    "summary": "Multiplies two numeric factors, or repeats a string/array by an integer factor.",
+    "syntax": "<a> * <b>",
+    "details": "Performs arithmetic multiplication: 6 * 7 = 42. When used with strings and numbers (\"=\" * 10), generates repeating sequences.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "num | str",
+        "description": "Left multiplicand."
+      },
+      {
+        "name": "b",
+        "type": "num",
+        "description": "Right multiplicand."
+      }
+    ],
+    "return_type": "num | str",
+    "paired_keywords": [
+      "/",
+      "+",
+      "-"
+    ],
+    "example": "set area : width * height\nset line : \"=\" * 20\ndisplay line",
+    "tags": [
+      "*",
+      "multiply",
+      "multiplication",
+      "times",
+      "product",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_divide",
+    "name": "/ (Division)",
+    "category": "operator",
+    "subcategory": "Arithmetic",
+    "summary": "Divides the left numeric operand by the right operand. Throws DivisionByZeroError if denominator is 0.",
+    "syntax": "<a> / <b>",
+    "details": "Floating point division. Automatically throws `DivisionByZeroError` if the denominator equals 0.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "num",
+        "description": "Dividend."
+      },
+      {
+        "name": "b",
+        "type": "num (non-zero)",
+        "description": "Divisor."
+      }
+    ],
+    "return_type": "num",
+    "paired_keywords": [
+      "%",
+      "*",
+      "+"
+    ],
+    "example": "set ratio : 100 / 4\ndisplay \"Ratio: \" + ratio",
+    "tags": [
+      "/",
+      "divide",
+      "division",
+      "slash",
+      "quotient",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_modulo",
+    "name": "% (Modulo)",
+    "category": "operator",
+    "subcategory": "Arithmetic",
+    "summary": "Calculates the integer or floating-point remainder of dividing two numbers.",
+    "syntax": "<a> % <b>",
+    "details": "Computes remainder after division (e.g. 10 % 3 = 1). Essential for parity checks and circular buffer wrapping.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "num",
+        "description": "Dividend."
+      },
+      {
+        "name": "b",
+        "type": "num",
+        "description": "Divisor."
+      }
+    ],
+    "return_type": "num",
+    "paired_keywords": [
+      "/",
+      "Math"
+    ],
+    "example": "if count % 2 == 0 then:\n  display \"Even number\"\nelse:\n  display \"Odd number\"",
+    "tags": [
+      "%",
+      "modulo",
+      "mod",
+      "remainder",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_eq",
+    "name": "== (Equality)",
+    "category": "operator",
+    "subcategory": "Comparison",
+    "summary": "Tests whether two expressions have equal values across numbers, strings, booleans, and arrays.",
+    "syntax": "<a> == <b>",
+    "details": "Returns true if values are identical; supports structural comparison of strings and numbers.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "any",
+        "description": "Left operand."
+      },
+      {
+        "name": "b",
+        "type": "any",
+        "description": "Right operand."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "!=",
+      "<",
+      ">",
+      "<=",
+      ">="
+    ],
+    "example": "if status == \"ready\" then:\n  display \"Proceeding\"",
+    "tags": [
+      "==",
+      "equality",
+      "equals",
+      "compare",
+      "comparison",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_neq",
+    "name": "!= (Inequality)",
+    "category": "operator",
+    "subcategory": "Comparison",
+    "summary": "Tests whether two expressions evaluate to different values.",
+    "syntax": "<a> != <b>",
+    "details": "Inverted equality test. Returns true when `a` is not equal to `b`.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "any",
+        "description": "Left operand."
+      },
+      {
+        "name": "b",
+        "type": "any",
+        "description": "Right operand."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "==",
+      "!",
+      "if"
+    ],
+    "example": "if token != nil then:\n  display \"Authenticated\"",
+    "tags": [
+      "!=",
+      "inequality",
+      "not equal",
+      "compare",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_relational",
+    "name": "<, >, <=, >= (Relational)",
+    "category": "operator",
+    "subcategory": "Comparison",
+    "summary": "Ordered relational comparisons: less than (<), greater than (>), less/equal (<=), greater/equal (>=).",
+    "syntax": "<a> < <b>\n<a> > <b>\n<a> <= <b>\n<a> >= <b>",
+    "details": "Evaluates numerical order and lexicographical string order.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "num | str",
+        "description": "Left operand."
+      },
+      {
+        "name": "b",
+        "type": "num | str",
+        "description": "Right operand."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "==",
+      "!=",
+      "if",
+      "while"
+    ],
+    "example": "if age >= 18 then:\n  display \"Adult\"",
+    "tags": [
+      "<",
+      ">",
+      "<=",
+      ">=",
+      "relational",
+      "comparison",
+      "order",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_and",
+    "name": "&& (Logical AND)",
+    "category": "operator",
+    "subcategory": "Logical",
+    "summary": "Short-circuiting logical conjunction. Evaluates to true only if both operands are truthy.",
+    "syntax": "<a> && <b>",
+    "details": "If `a` evaluates to false, `b` is short-circuited and not evaluated.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "bool",
+        "description": "First condition."
+      },
+      {
+        "name": "b",
+        "type": "bool",
+        "description": "Second condition."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "||",
+      "!",
+      "if"
+    ],
+    "example": "if user.isLoggedIn && user.hasPermission then:\n  display \"Access Granted\"",
+    "tags": [
+      "&&",
+      "and",
+      "logical and",
+      "boolean",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_or",
+    "name": "|| (Logical OR)",
+    "category": "operator",
+    "subcategory": "Logical",
+    "summary": "Short-circuiting logical disjunction. Evaluates to true if either operand is truthy.",
+    "syntax": "<a> || <b>",
+    "details": "If `a` is true, returns true immediately without evaluating `b`.",
+    "parameters": [
+      {
+        "name": "a",
+        "type": "bool",
+        "description": "First condition."
+      },
+      {
+        "name": "b",
+        "type": "bool",
+        "description": "Second condition."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "&&",
+      "!",
+      "if"
+    ],
+    "example": "if cache.exists || fetchRemote() then:\n  display \"Data ready\"",
+    "tags": [
+      "||",
+      "or",
+      "logical or",
+      "boolean",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_not",
+    "name": "! (Logical NOT / Comment Prefix)",
+    "category": "operator",
+    "subcategory": "Logical & Comments",
+    "summary": "Logical negation operator in expressions (!expr); also line comment prefix when starting a line (! comment).",
+    "syntax": "!<expression>\n! Single line comment",
+    "details": "Dual functionality in VerScript: (1) Inside expressions: inverts boolean truthiness (!true == false), (2) At start of line: denotes a line comment.",
+    "parameters": [
+      {
+        "name": "expr",
+        "type": "bool or expression",
+        "description": "Expression to negate."
+      }
+    ],
+    "return_type": "bool",
+    "paired_keywords": [
+      "&&",
+      "||",
+      "unless"
+    ],
+    "example": "! This is a VerScript comment line\nset bool flag : false\nif !flag then:\n  display \"Flag was false\"",
+    "tags": [
+      "!",
+      "not",
+      "negation",
+      "comment",
+      "invert",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_safe_nav",
+    "name": "?. (Safe Navigation)",
+    "category": "operator",
+    "subcategory": "Member Access",
+    "summary": "Safe property or method navigation; returns nil without throwing an error if the receiver is nil.",
+    "syntax": "<receiver>?.<property>\n<receiver>?.<method>(<args>)",
+    "details": "Prevents NullPointer / UndefinedVariable errors when traversing deeply nested optional structures.",
+    "parameters": [
+      {
+        "name": "receiver",
+        "type": "entity | object | nil",
+        "description": "Object to traverse."
+      }
+    ],
+    "return_type": "any or nil",
+    "paired_keywords": [
+      "??",
+      "nil",
+      "."
+    ],
+    "example": "set city : user?.profile?.address?.city ?? \"Unknown City\"\ndisplay city",
+    "tags": [
+      "?.",
+      "safe navigation",
+      "optional chaining",
+      "nil safe",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_null_coalesce",
+    "name": "?? (Nullish Coalescing)",
+    "category": "operator",
+    "subcategory": "Fallbacks",
+    "summary": "Returns the right-hand operand if the left operand is nil or empty, otherwise returns the left operand.",
+    "syntax": "<expr> ?? <default_value>",
+    "details": "Provides a robust fallback mechanism for optional or uninitialized variables.",
+    "parameters": [
+      {
+        "name": "expr",
+        "type": "any",
+        "description": "Primary value."
+      },
+      {
+        "name": "default_value",
+        "type": "any",
+        "description": "Fallback value if expr is nil."
+      }
+    ],
+    "return_type": "any",
+    "paired_keywords": [
+      "?.",
+      "nil",
+      "set"
+    ],
+    "example": "set port : config.port ?? 8080\ndisplay \"Running on port: \" + port",
+    "tags": [
+      "??",
+      "coalescing",
+      "nullish",
+      "default",
+      "fallback",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_colon",
+    "name": ": (Assignment & Block Colon)",
+    "category": "operator",
+    "subcategory": "Syntax & Assignment",
+    "summary": "Binds values to variables (set x: 42) and marks indented block headers (if cond:, loop 5:).",
+    "syntax": "set <var> : <value>\n<keyword> <condition>:\n  <indented_body>",
+    "details": "The fundamental syntactic pillar of VerScript: (1) Replaces the equal sign `=` for variable assignments, (2) Introduces Python-style indented blocks.",
+    "parameters": [],
+    "return_type": "void",
+    "paired_keywords": [
+      "set",
+      "def",
+      "if",
+      "while",
+      "class",
+      "lib"
+    ],
+    "example": "set x : 100\nif x > 50:\n  display \"Greater than 50\"",
+    "tags": [
+      ":",
+      "colon",
+      "assignment",
+      "block",
+      "bind",
+      "syntax",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_question_flag",
+    "name": "? (Directive / Flag Marker)",
+    "category": "operator",
+    "subcategory": "Directives & Flags",
+    "summary": "Prefixes modifier flags and inline parameters on statements (e.g. ?color=cyan, ?default=25, ?override).",
+    "syntax": "display <msg> ?color=<name> ?bold\nprompt <var> ?default=<val>",
+    "details": "VerScript statements support inline keyword options prefixed by `?` to configure visual formatting or execution flags.",
+    "parameters": [],
+    "return_type": "void",
+    "paired_keywords": [
+      "display",
+      "prompt",
+      "meta",
+      "pragma"
+    ],
+    "example": "display \"Success!\" ?color=green ?bold\nprompt username ?default=\"Guest\"",
+    "tags": [
+      "?",
+      "directive",
+      "flag",
+      "modifier",
+      "color",
+      "options",
+      "operator"
+    ]
+  },
+  {
+    "id": "op_dot",
+    "name": ". (Member Access)",
+    "category": "operator",
+    "subcategory": "Member Access",
+    "summary": "Accesses a property or invokes a method on an entity, library, string, or array instance.",
+    "syntax": "<object>.<member>",
+    "details": "Standard dot-operator notation for object-oriented dispatch, library routine calls (Matrix.det), and property reading.",
+    "parameters": [
+      {
+        "name": "object",
+        "type": "entity | lib | str | arr",
+        "description": "Receiver instance."
+      },
+      {
+        "name": "member",
+        "type": "identifier",
+        "description": "Property or method name."
+      }
+    ],
+    "return_type": "any",
+    "paired_keywords": [
+      "?.",
+      "this",
+      "class",
+      "lib"
+    ],
+    "example": "load Math\nset radius : 5\nset circ : 2 * Math.PI * radius",
+    "tags": [
+      ".",
+      "dot",
+      "member",
+      "method",
+      "property",
+      "call",
+      "operator"
+    ]
+  },
+  {
+    "id": "construct",
+    "name": "construct",
+    "category": "keyword",
+    "subcategory": "Object Orientation",
+    "summary": "Constructor block or routine automatically invoked when instantiating a class or library entity.",
+    "syntax": "class <Name> <arg1> <arg2>:\n  construct:\n    set this.<field1> : <arg1>\n    set this.<field2> : <arg2>\n\nlib <LibName> <arg1>:\n  construct:\n    ...",
+    "details": "The constructor initializes an entity's dynamic state upon creation. Parameters passed into `MyClass(a, b)` or `MyLib(a, b)` are bound in scope and available to initialize `this` properties. Constructors require no arguments of their own because class/lib arguments are attached directly to the definition.",
+    "parameters": [
+      {
+        "name": "this properties",
+        "type": "assignments",
+        "description": "Initialization statements setting this.<prop> fields."
+      }
+    ],
+    "return_type": "Entity Instance",
+    "paired_keywords": [
+      "class",
+      "lib",
+      "this",
+      "inst",
+      "set"
+    ],
+    "example": "class Vector2D x y:\n  construct:\n    set this.x : x\n    set this.y : y\n  def func magnitude:\n    reply Math.sqrt(this.x * this.x + this.y * this.y)\n\nset v : Vector2D(3, 4)\ndisplay v.magnitude()  ! 5",
+    "tags": [
+      "construct",
+      "constructor",
+      "init",
+      "create",
+      "class",
+      "lib",
+      "oop"
+    ]
+  },
+  {
+    "id": "this",
+    "name": "this",
+    "category": "keyword",
+    "subcategory": "Object Orientation",
+    "summary": "Implicit reference to the current entity instance executing a method or constructor.",
+    "syntax": "this.<property>\nthis.<method>()",
+    "details": "Within `class` and `lib` methods and constructors, `this` binds to the active instance state and dynamic member variables.",
+    "parameters": [],
+    "return_type": "entity",
+    "paired_keywords": [
+      "class",
+      "lib",
+      "construct",
+      "thisstatic"
+    ],
+    "example": "class Counter:\n  construct:\n    set this.val : 0\n  def func inc:\n    set this.val : this.val + 1",
+    "tags": [
+      "this",
+      "self",
+      "instance",
+      "current",
+      "oop",
+      "keyword"
+    ]
+  },
+  {
+    "id": "matrix_class",
+    "name": "Matrix (Constructor & Class)",
+    "category": "library",
+    "subcategory": "Matrix Math",
+    "summary": "Linear algebra library and matrix class supporting constructors, determinants, matrix multiplication, inversion, and decomposition.",
+    "syntax": "load Matrix\nset m : Matrix(rows, cols, defaultValue)\nMatrix.det(m)\nMatrix.identity(n)",
+    "details": "`Matrix` can be used statically (`Matrix.multiply(A, B)`) or instantiated as an entity (`set m : Matrix(3, 3, 0); m.det()`).",
+    "parameters": [
+      {
+        "name": "rows",
+        "type": "num",
+        "description": "Number of rows."
+      },
+      {
+        "name": "cols",
+        "type": "num",
+        "description": "Number of columns."
+      },
+      {
+        "name": "defaultVal",
+        "type": "num",
+        "description": "Optional initial element value (default 0)."
+      }
+    ],
+    "return_type": "Matrix entity or 2D Array",
+    "paired_keywords": [
+      "load",
+      "Vector",
+      "Math",
+      "construct"
+    ],
+    "example": "load Matrix\nset m : Matrix.identity(3)\ndisplay \"Determinant: \" + Matrix.det(m)",
+    "tags": [
+      "matrix",
+      "det",
+      "determinant",
+      "identity",
+      "inverse",
+      "linear-algebra",
+      "math",
+      "library"
+    ]
+  },
+  {
+    "id": "vector_class",
+    "name": "Vector (Constructor & Class)",
+    "category": "library",
+    "subcategory": "Vector Math",
+    "summary": "2D, 3D, and n-dimensional geometric vector library and class (dot product, cross product, magnitude, normalize).",
+    "syntax": "load Vector\nset v : Vector(x, y, z)\nv.magnitude()\nVector.dot(v1, v2)",
+    "details": "Provides high-speed vector arithmetic. Supports instance method calls (`v.magnitude()`) as well as static library functions (`Vector.cross(u, v)`).",
+    "parameters": [
+      {
+        "name": "x",
+        "type": "num",
+        "description": "X component."
+      },
+      {
+        "name": "y",
+        "type": "num",
+        "description": "Y component."
+      },
+      {
+        "name": "z",
+        "type": "num",
+        "description": "Optional Z component (default 0)."
+      }
+    ],
+    "return_type": "Vector entity",
+    "paired_keywords": [
+      "load",
+      "Matrix",
+      "Math",
+      "construct"
+    ],
+    "example": "load Vector\nset v1 : Vector(1, 0, 0)\nset v2 : Vector(0, 1, 0)\nset v3 : Vector.cross(v1, v2)\ndisplay v3.z  ! 1",
+    "tags": [
+      "vector",
+      "dot",
+      "cross",
+      "magnitude",
+      "norm",
+      "physics",
+      "geometry",
+      "library"
+    ]
+  },
+  {
+    "id": "json_methods",
+    "name": "Json.parse / Json.stringify",
+    "category": "library",
+    "subcategory": "Serialization",
+    "summary": "Parses JSON text into VerScript entities and arrays, or serializes data into formatted JSON strings.",
+    "syntax": "load Json\nset data : Json.parse(jsonString)\nset text : Json.stringify(data)",
+    "details": "Standard JSON parser and serializer with support for nested arrays, dictionaries, numbers, and escape characters.",
+    "parameters": [
+      {
+        "name": "input",
+        "type": "str or entity",
+        "description": "JSON string to parse, or entity to serialize."
+      }
+    ],
+    "return_type": "entity | arr | str",
+    "paired_keywords": [
+      "load",
+      "Fs",
+      "Http",
+      "str"
+    ],
+    "example": "load Json\nset obj : Json.parse('{\"name\": \"VerScript\", \"version\": 2}')\ndisplay obj.name",
+    "tags": [
+      "json",
+      "parse",
+      "stringify",
+      "serialization",
+      "dict",
+      "library"
+    ]
+  },
+  {
+    "id": "fs_methods",
+    "name": "Fs.readFile / Fs.writeFile",
+    "category": "library",
+    "subcategory": "Filesystem",
+    "summary": "Reads, writes, and manages files and directories on the local host filesystem.",
+    "syntax": "load Fs\nset content : Fs.readFile(\"data.txt\")\nFs.writeFile(\"output.txt\", content)\nFs.exists(\"data.txt\")",
+    "details": "Provides direct filesystem access. Automatically handles file descriptors, binary buffers, and text encodings.",
+    "parameters": [
+      {
+        "name": "path",
+        "type": "str",
+        "description": "Filesystem path."
+      },
+      {
+        "name": "content",
+        "type": "str",
+        "description": "Data to write."
+      }
+    ],
+    "return_type": "str or bool",
+    "paired_keywords": [
+      "load",
+      "Path",
+      "Sys"
+    ],
+    "example": "load Fs\nif Fs.exists(\"config.vrs\") then:\n  set cfg : Fs.readFile(\"config.vrs\")",
+    "tags": [
+      "fs",
+      "file",
+      "readfile",
+      "writefile",
+      "io",
+      "filesystem",
+      "library"
     ]
   }
 ]
