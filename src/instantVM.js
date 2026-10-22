@@ -296,7 +296,7 @@ export function evalSimpleExpr(expr, vars) {
 
             const Fs = {
                 exists: (p) => true,
-                isVrsFile: (p) => String(p).endsWith(".vrs")
+                isVrsFile: (p) => String(p).endsWith(".vrs") || String(p).endsWith(".lib.vrs") || String(p).endsWith(".h.vrs")
             };
 
             const Path = {
