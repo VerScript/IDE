@@ -1853,17 +1853,20 @@
     "id": "kw-step",
     "name": "step",
     "category": "keyword",
-    "subcategory": "Iteration Step",
-    "title": "step — VerScript Language Keyword",
-    "summary": "Explicit step keyword modifier for iteration loops.",
-    "syntax": "loop i from 0 to 20 step 5",
-    "returns": "void / value",
-    "example": "loop i from 0 to 20 step 5:\n  display i",
+    "subcategory": "Loop Stride Control",
+    "title": "step — Customizable Loop Stride",
+    "summary": "Controls the increment or decrement stride when iterating over numeric ranges.",
+    "syntax": "for i in start .. end step stride:\n    ...",
+    "returns": "Advances loop counter by stride value",
+    "example": "for i in 0 .. 10 step 2:\n    display \"Even index: \" + i",
     "tags": [
       "step",
+      "loop",
       "stride",
-      "by"
-    ]
+      "range"
+    ],
+    "parameters": "stride (positive integer increment)",
+    "pairedWith": "for, in, .."
   },
   {
     "id": "kw-const",
@@ -4285,6 +4288,1770 @@
       "io",
       "filesystem",
       "library"
+    ]
+  },
+  {
+    "id": "err-outputtypeerror",
+    "name": "OutputTypeError",
+    "category": "error",
+    "subcategory": "Compiler Exception",
+    "title": "OutputTypeError — Auto-Registered Exception",
+    "summary": "Compiler error exception registered in src/main.c.",
+    "criticality": "6 / 10",
+    "suppressionTier": "Tier 1 (SuppressErrors compatible)",
+    "causes": "Triggered by runtime or syntax violation during evaluation.",
+    "remedy": "Guard with do...unless OutputTypeError block or validate inputs.",
+    "example": "do:\n  ! Operation\nunless OutputTypeError:\n  display \"Caught OutputTypeError\" ?color=#f59e0b",
+    "tags": [
+      "outputtypeerror",
+      "error",
+      "exception"
+    ]
+  },
+  {
+    "id": "err-outputtypemissingerror",
+    "name": "OutputTypeMissingError",
+    "category": "error",
+    "subcategory": "Compiler Exception",
+    "title": "OutputTypeMissingError — Auto-Registered Exception",
+    "summary": "Compiler error exception registered in src/main.c.",
+    "criticality": "6 / 10",
+    "suppressionTier": "Tier 1 (SuppressErrors compatible)",
+    "causes": "Triggered by runtime or syntax violation during evaluation.",
+    "remedy": "Guard with do...unless OutputTypeMissingError block or validate inputs.",
+    "example": "do:\n  ! Operation\nunless OutputTypeMissingError:\n  display \"Caught OutputTypeMissingError\" ?color=#f59e0b",
+    "tags": [
+      "outputtypemissingerror",
+      "error",
+      "exception"
+    ]
+  },
+  {
+    "id": "err-outputexistenceerror",
+    "name": "OutputExistenceError",
+    "category": "error",
+    "subcategory": "Compiler Exception",
+    "title": "OutputExistenceError — Auto-Registered Exception",
+    "summary": "Compiler error exception registered in src/main.c.",
+    "criticality": "6 / 10",
+    "suppressionTier": "Tier 1 (SuppressErrors compatible)",
+    "causes": "Triggered by runtime or syntax violation during evaluation.",
+    "remedy": "Guard with do...unless OutputExistenceError block or validate inputs.",
+    "example": "do:\n  ! Operation\nunless OutputExistenceError:\n  display \"Caught OutputExistenceError\" ?color=#f59e0b",
+    "tags": [
+      "outputexistenceerror",
+      "error",
+      "exception"
+    ]
+  },
+  {
+    "id": "err-complexmatherror",
+    "name": "ComplexMathError",
+    "category": "error",
+    "subcategory": "Compiler Exception",
+    "title": "ComplexMathError — Auto-Registered Exception",
+    "summary": "Compiler error exception registered in src/main.c.",
+    "criticality": "6 / 10",
+    "suppressionTier": "Tier 1 (SuppressErrors compatible)",
+    "causes": "Triggered by runtime or syntax violation during evaluation.",
+    "remedy": "Guard with do...unless ComplexMathError block or validate inputs.",
+    "example": "do:\n  ! Operation\nunless ComplexMathError:\n  display \"Caught ComplexMathError\" ?color=#f59e0b",
+    "tags": [
+      "complexmatherror",
+      "error",
+      "exception"
+    ]
+  },
+  {
+    "id": "kw-and",
+    "name": "and",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "and — Short-Circuit Logical Conjunction",
+    "summary": "Evaluates whether two boolean expressions are both true, short-circuiting evaluation if the left operand is false.",
+    "syntax": "exprA and exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool (true if both operands evaluate to true)",
+    "pairedWith": "if, while, guard, not, or",
+    "example": "isValid : true\nisAdmin : true\nif isValid and isAdmin:\n    display \"Access Granted\" ?color=#00FFCC",
+    "tags": [
+      "and",
+      "logic",
+      "boolean",
+      "conditional"
+    ]
+  },
+  {
+    "id": "kw-or",
+    "name": "or",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "or — Short-Circuit Logical Disjunction",
+    "summary": "Evaluates whether at least one of two boolean expressions is true, short-circuiting if the left operand is true.",
+    "syntax": "exprA or exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool (true if either operand is true)",
+    "pairedWith": "if, while, guard, and, not",
+    "example": "isOwner : false\nisModerator : true\nif isOwner or isModerator:\n    display \"Action Allowed\" ?color=#00FFCC",
+    "tags": [
+      "or",
+      "logic",
+      "boolean",
+      "conditional"
+    ]
+  },
+  {
+    "id": "kw-not",
+    "name": "not",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "not — Unary Logical Inversion",
+    "summary": "Inverts the truth value of a boolean expression.",
+    "syntax": "not expr",
+    "parameters": "expr (bool)",
+    "returns": "bool (inverted boolean value)",
+    "pairedWith": "if, unless, and, or",
+    "example": "isReady : false\nif not isReady:\n    display \"System warming up...\" ?color=#f59e0b",
+    "tags": [
+      "not",
+      "logic",
+      "boolean",
+      "negation"
+    ]
+  },
+  {
+    "id": "kw-nand",
+    "name": "nand",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "nand — Negated Logical AND Gate",
+    "summary": "Returns false only when both operands are true; otherwise returns true.",
+    "syntax": "exprA nand exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool",
+    "pairedWith": "if, nor, xor",
+    "example": "flagA : true\nflagB : true\nresult : flagA nand flagB\ndisplay \"NAND Result: \" + result  ! Displays false",
+    "tags": [
+      "nand",
+      "logic",
+      "gate",
+      "boolean"
+    ]
+  },
+  {
+    "id": "kw-nor",
+    "name": "nor",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "nor — Negated Logical OR Gate",
+    "summary": "Returns true only when both operands are false; otherwise returns false.",
+    "syntax": "exprA nor exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool",
+    "pairedWith": "if, nand, xor",
+    "example": "a : false\nb : false\nif a nor b:\n    display \"Both are inactive\" ?color=#38bdf8",
+    "tags": [
+      "nor",
+      "logic",
+      "gate",
+      "boolean"
+    ]
+  },
+  {
+    "id": "kw-xor",
+    "name": "xor",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "xor — Exclusive Disjunction",
+    "summary": "Returns true if exactly one operand is true and the other is false.",
+    "syntax": "exprA xor exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool",
+    "pairedWith": "xnor, and, or",
+    "example": "hasCoupon : true\nhasDiscount : false\nif hasCoupon xor hasDiscount:\n    display \"Valid single promotion\" ?color=#10b981",
+    "tags": [
+      "xor",
+      "logic",
+      "exclusive",
+      "boolean"
+    ]
+  },
+  {
+    "id": "kw-xnor",
+    "name": "xnor",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "xnor — Logical Equivalence / Negated XOR",
+    "summary": "Returns true if both operands have identical boolean truth values.",
+    "syntax": "exprA xnor exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool",
+    "pairedWith": "xor, and, or",
+    "example": "stateA : true\nstateB : true\nif stateA xnor stateB:\n    display \"States are synchronized\" ?color=#00FFCC",
+    "tags": [
+      "xnor",
+      "logic",
+      "equivalence",
+      "boolean"
+    ]
+  },
+  {
+    "id": "kw-xand",
+    "name": "xand",
+    "category": "keyword",
+    "subcategory": "Logical Operator",
+    "title": "xand — Cross Logical Conjunction",
+    "summary": "Specialized non-associative logical conjunction operator for strict truth state validation.",
+    "syntax": "exprA xand exprB",
+    "parameters": "exprA (bool), exprB (bool)",
+    "returns": "bool",
+    "pairedWith": "and, nand",
+    "example": "cond1 : true\ncond2 : true\nres : cond1 xand cond2\ndisplay \"XAND: \" + res",
+    "tags": [
+      "xand",
+      "logic",
+      "strict",
+      "boolean"
+    ]
+  },
+  {
+    "id": "kw-true",
+    "name": "true",
+    "category": "keyword",
+    "subcategory": "Boolean Literal",
+    "title": "true — Canonical Boolean Truth Value",
+    "summary": "Represents the standard boolean true constant in expressions and logical evaluations.",
+    "syntax": "true",
+    "parameters": "None",
+    "returns": "bool",
+    "pairedWith": "false, bool, if",
+    "example": "isActive : true\ndisplay \"System active: \" + isActive",
+    "tags": [
+      "true",
+      "boolean",
+      "literal",
+      "constant"
+    ]
+  },
+  {
+    "id": "kw-false",
+    "name": "false",
+    "category": "keyword",
+    "subcategory": "Boolean Literal",
+    "title": "false — Canonical Boolean Falsity Value",
+    "summary": "Represents the standard boolean false constant in expressions and logical evaluations.",
+    "syntax": "false",
+    "parameters": "None",
+    "returns": "bool",
+    "pairedWith": "true, bool, if",
+    "example": "isPaused : false\ndisplay \"Paused: \" + isPaused",
+    "tags": [
+      "false",
+      "boolean",
+      "literal",
+      "constant"
+    ]
+  },
+  {
+    "id": "kw-then",
+    "name": "then",
+    "category": "keyword",
+    "subcategory": "Conditional Clause",
+    "title": "then — Consequent Conditional Action",
+    "summary": "Specifies the immediate execution statement following an if condition on the same line.",
+    "syntax": "if condition then statement",
+    "parameters": "condition (bool), statement (action)",
+    "returns": "Statement result",
+    "pairedWith": "if, else",
+    "example": "score : 95\nif score >= 90 then display \"Honor Roll!\" ?color=#00FFCC",
+    "tags": [
+      "then",
+      "control",
+      "conditional",
+      "if"
+    ]
+  },
+  {
+    "id": "kw-else",
+    "name": "else",
+    "category": "keyword",
+    "subcategory": "Branching Clause",
+    "title": "else — Alternative Execution Branch",
+    "summary": "Executes an alternate block of code when an preceding if or unless condition is not satisfied.",
+    "syntax": "if condition:\n    ...\nelse:\n    ...",
+    "parameters": "None",
+    "returns": "None",
+    "pairedWith": "if, then, unless",
+    "example": "level : 5\nif level > 10:\n    display \"Veteran\"\nelse:\n    display \"Novice\" ?color=#f59e0b",
+    "tags": [
+      "else",
+      "control",
+      "conditional",
+      "branch"
+    ]
+  },
+  {
+    "id": "kw-with",
+    "name": "with",
+    "category": "keyword",
+    "subcategory": "Context & Pattern Matching",
+    "title": "with — Contextual Binding & Match Target",
+    "summary": "Binds expression targets into match evaluation or scoped contextual resources.",
+    "syntax": "match target with:\n  case pattern: ...",
+    "parameters": "target (expression)",
+    "returns": "Evaluated branch result",
+    "pairedWith": "match, case",
+    "example": "role : \"admin\"\nmatch role with:\n    case \"admin\": display \"Superuser Access\"\n    case \"guest\": display \"Read Only\"\n    case _: display \"Unknown Role\"",
+    "tags": [
+      "with",
+      "match",
+      "context",
+      "pattern"
+    ]
+  },
+  {
+    "id": "kw-case",
+    "name": "case",
+    "category": "keyword",
+    "subcategory": "Pattern Branch",
+    "title": "case — Pattern Matching Branch Selector",
+    "summary": "Defines an individual matching branch and statement within a match expression.",
+    "syntax": "case pattern : action",
+    "parameters": "pattern (literal or wildcard `_`)",
+    "returns": "Branch evaluation result",
+    "pairedWith": "match, with",
+    "example": "code : 200\nmatch code with:\n    case 200: display \"OK\"\n    case 404: display \"Not Found\"\n    case _: display \"Server Error\"",
+    "tags": [
+      "case",
+      "match",
+      "pattern",
+      "branch"
+    ]
+  },
+  {
+    "id": "kw-in",
+    "name": "in",
+    "category": "keyword",
+    "subcategory": "Collection & Range Traversal",
+    "title": "in — Membership Predicate & Range Iterator",
+    "summary": "Specifies range or collection iteration in loop headers and tests for element inclusion.",
+    "syntax": "for element in collection:\n    ...",
+    "parameters": "element (identifier), collection (array, range, or string)",
+    "returns": "Iterates through members",
+    "pairedWith": "for, iterate, step, range",
+    "example": "for num in [10, 20, 30]:\n    display \"Number: \" + num",
+    "tags": [
+      "in",
+      "loop",
+      "collection",
+      "iteration"
+    ]
+  },
+  {
+    "id": "kw-is",
+    "name": "is",
+    "category": "keyword",
+    "subcategory": "Type & Identity Predicate",
+    "title": "is — Dynamic Type & State Predicate",
+    "summary": "Tests whether a variable conforms to a primitive type or numeric characteristic (even/odd).",
+    "syntax": "expression is type_or_predicate",
+    "parameters": "expression (any), type (num, str, bool, arr, entity, even, odd)",
+    "returns": "bool",
+    "pairedWith": "if, guard, even, odd",
+    "example": "val : 42\nif val is num:\n    display \"Value is numeric\" ?color=#00FFCC\nif val is even:\n    display \"Value is an even integer\"",
+    "tags": [
+      "is",
+      "typecheck",
+      "predicate",
+      "types"
+    ]
+  },
+  {
+    "id": "kw-even",
+    "name": "even",
+    "category": "keyword",
+    "subcategory": "Numeric Predicate",
+    "title": "even — Even Integer Predicate",
+    "summary": "Used alongside the 'is' operator to test if an integer is divisible by 2.",
+    "syntax": "number is even",
+    "parameters": "number (num)",
+    "returns": "bool",
+    "pairedWith": "is, odd",
+    "example": "count : 14\nif count is even:\n    display \"Even count detected\"",
+    "tags": [
+      "even",
+      "predicate",
+      "math",
+      "integer"
+    ]
+  },
+  {
+    "id": "kw-odd",
+    "name": "odd",
+    "category": "keyword",
+    "subcategory": "Numeric Predicate",
+    "title": "odd — Odd Integer Predicate",
+    "summary": "Used alongside the 'is' operator to test if an integer is not divisible by 2.",
+    "syntax": "number is odd",
+    "parameters": "number (num)",
+    "returns": "bool",
+    "pairedWith": "is, even",
+    "example": "idx : 7\nif idx is odd:\n    display \"Odd index: \" + idx",
+    "tags": [
+      "odd",
+      "predicate",
+      "math",
+      "integer"
+    ]
+  },
+  {
+    "id": "kw-iterate",
+    "name": "iterate",
+    "category": "keyword",
+    "subcategory": "Loop Construct",
+    "title": "iterate — Explicit Sequence Driver",
+    "summary": "Initiates explicit iteration across numeric ranges or collection items.",
+    "syntax": "iterate from start to end by step:\n    ...",
+    "parameters": "start (num), end (num), step (num)",
+    "returns": "Executes body for each iteration",
+    "pairedWith": "from, to, by, step, loop",
+    "example": "iterate from 1 to 5:\n    display \"Step count\"",
+    "tags": [
+      "iterate",
+      "loop",
+      "range",
+      "iteration"
+    ]
+  },
+  {
+    "id": "kw-yield",
+    "name": "yield",
+    "category": "keyword",
+    "subcategory": "Coroutine Generator",
+    "title": "yield — Generator Value Suspension",
+    "summary": "Suspends function execution and yields an intermediate value to the consumer.",
+    "syntax": "yield value",
+    "parameters": "value (any)",
+    "returns": "Yielded element",
+    "pairedWith": "func, reply, async",
+    "example": "func countUp(max):\n    for i in 1 .. max:\n        yield i",
+    "tags": [
+      "yield",
+      "generator",
+      "coroutine",
+      "async"
+    ]
+  },
+  {
+    "id": "kw-extern",
+    "name": "extern",
+    "category": "keyword",
+    "subcategory": "Foreign Function Interface",
+    "title": "extern — Dynamic Win32 / Native Shared Library FFI",
+    "summary": "Declares and binds external dynamic symbols from system DLLs (e.g. kernel32.dll) for direct runtime invocation.",
+    "syntax": "extern \"library.dll\" function_name(args)",
+    "parameters": "library.dll (string), function_name (identifier)",
+    "returns": "Native integer or pointer return value",
+    "pairedWith": "def, func, load",
+    "example": "extern \"kernel32.dll\" GetCurrentProcessId()\npid : GetCurrentProcessId()\ndisplay \"Native Win32 Process ID: \" + pid ?color=#00FFCC",
+    "tags": [
+      "extern",
+      "ffi",
+      "win32",
+      "native",
+      "dll"
+    ]
+  },
+  {
+    "id": "kw-lib",
+    "name": "lib",
+    "category": "keyword",
+    "subcategory": "Module Declaration",
+    "title": "lib — Modular Library Definition",
+    "summary": "Declares a reusable library namespace containing exported functions, classes, and constants.",
+    "syntax": "lib LibraryName:\n    export def method(): ...",
+    "parameters": "LibraryName (identifier)",
+    "returns": "Library module object",
+    "pairedWith": "export, load, import, public",
+    "example": "lib MathUtils:\n    export def doubleVal(n):\n        reply n * 2",
+    "tags": [
+      "lib",
+      "library",
+      "module",
+      "export"
+    ]
+  },
+  {
+    "id": "kw-library",
+    "name": "library",
+    "category": "keyword",
+    "subcategory": "Module Declaration",
+    "title": "library — Canonical Module Definition Alias",
+    "summary": "Full keyword alias for declaring modular library units and namespaces.",
+    "syntax": "library MyLib:\n    ...",
+    "parameters": "MyLib (identifier)",
+    "returns": "Library namespace object",
+    "pairedWith": "lib, export, import",
+    "example": "library Geometry:\n    export def area(w, h):\n        reply w * h",
+    "tags": [
+      "library",
+      "lib",
+      "module",
+      "namespace"
+    ]
+  },
+  {
+    "id": "kw-pkg",
+    "name": "pkg",
+    "category": "keyword",
+    "subcategory": "Package Namespace",
+    "title": "pkg — Package Declaration & Scoping",
+    "summary": "Encapsulates source units into a distribution package namespace for the VerScript Package Manager.",
+    "syntax": "pkg package.name",
+    "parameters": "package.name (qualified identifier)",
+    "returns": "Enforces package scope",
+    "pairedWith": "import, export, lib",
+    "example": "pkg org.verscript.net\nlib HttpClient:\n    ...",
+    "tags": [
+      "pkg",
+      "package",
+      "namespace",
+      "distribution"
+    ]
+  },
+  {
+    "id": "kw-config",
+    "name": "config",
+    "category": "keyword",
+    "subcategory": "Configuration & Directives",
+    "title": "config — Compiler & Runtime Directive Block",
+    "summary": "Declares execution configuration options, optimization levels, or runtime constraints for a script.",
+    "syntax": "config:\n  key : value",
+    "parameters": "Configuration key-value pairs",
+    "returns": "Configures script runtime environment",
+    "pairedWith": "pragma, header",
+    "example": "config:\n    strictTypes : true\n    optimize : 2",
+    "tags": [
+      "config",
+      "compiler",
+      "runtime",
+      "settings"
+    ]
+  },
+  {
+    "id": "kw-extends",
+    "name": "extends",
+    "category": "keyword",
+    "subcategory": "Type Inheritance",
+    "title": "extends — DataType Specialization & Inheritance",
+    "summary": "Inherits and extends fields and methods from a base DataType or Class.",
+    "syntax": "DataType SubType extends BaseType:\n    ...",
+    "parameters": "BaseType (DataType identifier)",
+    "returns": "Extended subtype definition",
+    "pairedWith": "DataType, class",
+    "example": "DataType Employee extends Person:\n    department : str",
+    "tags": [
+      "extends",
+      "inheritance",
+      "oop",
+      "datatype"
+    ]
+  },
+  {
+    "id": "kw-unpack",
+    "name": "unpack",
+    "category": "keyword",
+    "subcategory": "Destructuring Assignment",
+    "title": "unpack — Structured Destructuring Assignment",
+    "summary": "Unpacks elements from an array or entity fields directly into multiple variables.",
+    "syntax": "unpack [var1, var2] : array_or_tuple",
+    "parameters": "Target variable list and source collection",
+    "returns": "Binds variables",
+    "pairedWith": "set, :",
+    "example": "coords : [100, 250]\nunpack [x, y] : coords\ndisplay \"X: \" + x + \", Y: \" + y",
+    "tags": [
+      "unpack",
+      "destructuring",
+      "array",
+      "assignment"
+    ]
+  },
+  {
+    "id": "kw-ceil",
+    "name": "ceil",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "ceil — Ceiling Rounding",
+    "summary": "Rounds a numeric floating-point value upward to the nearest integer.",
+    "syntax": "ceil(value)",
+    "parameters": "value (num)",
+    "returns": "num (ceiling integer)",
+    "pairedWith": "floor, round",
+    "example": "val : 4.12\ndisplay ceil(val)  ! Outputs 5",
+    "tags": [
+      "ceil",
+      "math",
+      "rounding",
+      "float"
+    ]
+  },
+  {
+    "id": "kw-floor",
+    "name": "floor",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "floor — Floor Rounding",
+    "summary": "Rounds a numeric value downward to the nearest integer.",
+    "syntax": "floor(value)",
+    "parameters": "value (num)",
+    "returns": "num (floor integer)",
+    "pairedWith": "ceil, round",
+    "example": "val : 8.89\ndisplay floor(val)  ! Outputs 8",
+    "tags": [
+      "floor",
+      "math",
+      "rounding",
+      "float"
+    ]
+  },
+  {
+    "id": "kw-round",
+    "name": "round",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "round — Nearest Integer Rounding",
+    "summary": "Rounds a number to the nearest integer value using standard half-up rounding.",
+    "syntax": "round(value)",
+    "parameters": "value (num)",
+    "returns": "num (nearest integer)",
+    "pairedWith": "floor, ceil",
+    "example": "display round(7.5)  ! Outputs 8",
+    "tags": [
+      "round",
+      "math",
+      "rounding",
+      "numeric"
+    ]
+  },
+  {
+    "id": "kw-clamp",
+    "name": "clamp",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "clamp — Range Value Boundary Clamping",
+    "summary": "Constrains a value within a specified minimum and maximum range.",
+    "syntax": "clamp(value, minVal, maxVal)",
+    "parameters": "value (num), minVal (num), maxVal (num)",
+    "returns": "num (clamped value)",
+    "pairedWith": "min, max",
+    "example": "hp : clamp(currentHp, 0, 100)\ndisplay \"Health: \" + hp",
+    "tags": [
+      "clamp",
+      "math",
+      "bounds",
+      "range"
+    ]
+  },
+  {
+    "id": "kw-min",
+    "name": "min",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "min — Minimum Value Determination",
+    "summary": "Returns the lesser of two values, or the smallest item in an array.",
+    "syntax": "min(a, b) or min(array)",
+    "parameters": "a (num), b (num) or array of nums",
+    "returns": "num (smallest value)",
+    "pairedWith": "max, clamp",
+    "example": "display min(14, 29)  ! Outputs 14",
+    "tags": [
+      "min",
+      "math",
+      "minimum",
+      "compare"
+    ]
+  },
+  {
+    "id": "kw-max",
+    "name": "max",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "max — Maximum Value Determination",
+    "summary": "Returns the greater of two values, or the largest item in an array.",
+    "syntax": "max(a, b) or max(array)",
+    "parameters": "a (num), b (num) or array of nums",
+    "returns": "num (largest value)",
+    "pairedWith": "min, clamp",
+    "example": "display max(14, 29)  ! Outputs 29",
+    "tags": [
+      "max",
+      "math",
+      "maximum",
+      "compare"
+    ]
+  },
+  {
+    "id": "kw-exp",
+    "name": "exp",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "exp — Natural Exponential Function",
+    "summary": "Computes e raised to the power of x ($e^x$).",
+    "syntax": "exp(x)",
+    "parameters": "x (num)",
+    "returns": "num ($e^x$)",
+    "pairedWith": "ln, log2",
+    "example": "display exp(1)  ! Approximately 2.71828",
+    "tags": [
+      "exp",
+      "math",
+      "exponential",
+      "transcendental"
+    ]
+  },
+  {
+    "id": "kw-ln",
+    "name": "ln",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "ln — Natural Logarithm (Base e)",
+    "summary": "Computes the natural logarithm (base e) of a positive number.",
+    "syntax": "ln(x)",
+    "parameters": "x (positive num)",
+    "returns": "num (natural logarithm)",
+    "pairedWith": "exp, log, log2",
+    "example": "display ln(2.71828)  ! Approximately 1.0",
+    "tags": [
+      "ln",
+      "math",
+      "logarithm",
+      "natural"
+    ]
+  },
+  {
+    "id": "kw-log2",
+    "name": "log2",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "log2 — Binary Logarithm (Base 2)",
+    "summary": "Computes the base-2 logarithm of a positive number.",
+    "syntax": "log2(x)",
+    "parameters": "x (positive num)",
+    "returns": "num (base-2 logarithm)",
+    "pairedWith": "log, ln",
+    "example": "display log2(256)  ! Outputs 8",
+    "tags": [
+      "log2",
+      "math",
+      "logarithm",
+      "binary"
+    ]
+  },
+  {
+    "id": "kw-sqrt",
+    "name": "sqrt",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "sqrt — Square Root",
+    "summary": "Computes the principal non-negative square root of a number.",
+    "syntax": "sqrt(x)",
+    "parameters": "x (non-negative num)",
+    "returns": "num ($sqrt{x}$)",
+    "pairedWith": "rt, hypot",
+    "example": "display sqrt(144)  ! Outputs 12",
+    "tags": [
+      "sqrt",
+      "math",
+      "root",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-rt",
+    "name": "rt",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "rt — Arbitrary n-th Root",
+    "summary": "Computes the arbitrary n-th root of a number.",
+    "syntax": "rt(value, n)",
+    "parameters": "value (num), n (num degree)",
+    "returns": "num ($sqrt[n]{\text{value}}$)",
+    "pairedWith": "sqrt, exp",
+    "example": "display rt(27, 3)  ! Cube root = 3",
+    "tags": [
+      "rt",
+      "root",
+      "math",
+      "algebra"
+    ]
+  },
+  {
+    "id": "kw-hypot",
+    "name": "hypot",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "hypot — Euclidean Distance Hypotenuse",
+    "summary": "Computes $sqrt{x^2 + y^2}$ without intermediate overflow or underflow.",
+    "syntax": "hypot(x, y)",
+    "parameters": "x (num), y (num)",
+    "returns": "num (hypotenuse length)",
+    "pairedWith": "sqrt, sin, cos",
+    "example": "dist : hypot(3, 4)\ndisplay \"Hypotenuse: \" + dist  ! Outputs 5",
+    "tags": [
+      "hypot",
+      "math",
+      "geometry",
+      "distance"
+    ]
+  },
+  {
+    "id": "kw-gcd",
+    "name": "gcd",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "gcd — Greatest Common Divisor",
+    "summary": "Computes the largest positive integer that divides two given integers without a remainder.",
+    "syntax": "gcd(a, b)",
+    "parameters": "a (int), b (int)",
+    "returns": "int (greatest common divisor)",
+    "pairedWith": "lcm, hcf",
+    "example": "display gcd(48, 18)  ! Outputs 6",
+    "tags": [
+      "gcd",
+      "math",
+      "number-theory",
+      "divisor"
+    ]
+  },
+  {
+    "id": "kw-hcf",
+    "name": "hcf",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "hcf — Highest Common Factor",
+    "summary": "Canonical alias for gcd.",
+    "syntax": "hcf(a, b)",
+    "parameters": "a (int), b (int)",
+    "returns": "int",
+    "pairedWith": "gcd, lcm",
+    "example": "display hcf(36, 60)  ! Outputs 12",
+    "tags": [
+      "hcf",
+      "gcd",
+      "math",
+      "divisor"
+    ]
+  },
+  {
+    "id": "kw-lcm",
+    "name": "lcm",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "lcm — Least Common Multiple",
+    "summary": "Computes the smallest positive integer that is divisible by both given numbers.",
+    "syntax": "lcm(a, b)",
+    "parameters": "a (int), b (int)",
+    "returns": "int",
+    "pairedWith": "gcd, hcf",
+    "example": "display lcm(12, 15)  ! Outputs 60",
+    "tags": [
+      "lcm",
+      "math",
+      "multiple",
+      "number-theory"
+    ]
+  },
+  {
+    "id": "kw-sin",
+    "name": "sin",
+    "category": "keyword",
+    "subcategory": "Trigonometric Function",
+    "title": "sin — Trigonometric Sine (Radians)",
+    "summary": "Computes the trigonometric sine of an angle given in radians.",
+    "syntax": "sin(radians)",
+    "parameters": "radians (num)",
+    "returns": "num (-1.0 to 1.0)",
+    "pairedWith": "cos, tan, sinDeg",
+    "example": "display sin(pi / 2)  ! Outputs 1",
+    "tags": [
+      "sin",
+      "trig",
+      "math",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-cos",
+    "name": "cos",
+    "category": "keyword",
+    "subcategory": "Trigonometric Function",
+    "title": "cos — Trigonometric Cosine (Radians)",
+    "summary": "Computes the trigonometric cosine of an angle in radians.",
+    "syntax": "cos(radians)",
+    "parameters": "radians (num)",
+    "returns": "num (-1.0 to 1.0)",
+    "pairedWith": "sin, tan, cosDeg",
+    "example": "display cos(0)  ! Outputs 1",
+    "tags": [
+      "cos",
+      "trig",
+      "math",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-tan",
+    "name": "tan",
+    "category": "keyword",
+    "subcategory": "Trigonometric Function",
+    "title": "tan — Trigonometric Tangent (Radians)",
+    "summary": "Computes the trigonometric tangent of an angle in radians.",
+    "syntax": "tan(radians)",
+    "parameters": "radians (num)",
+    "returns": "num (tangent ratio)",
+    "pairedWith": "sin, cos",
+    "example": "display tan(pi / 4)  ! Approximately 1",
+    "tags": [
+      "tan",
+      "trig",
+      "math",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-sindeg",
+    "name": "sinDeg",
+    "category": "keyword",
+    "subcategory": "Trigonometric Function",
+    "title": "sinDeg / sindeg — Trigonometric Sine (Degrees)",
+    "summary": "Computes the sine of an angle directly specified in degrees.",
+    "syntax": "sinDeg(degrees)",
+    "parameters": "degrees (num)",
+    "returns": "num (-1.0 to 1.0)",
+    "pairedWith": "cosDeg, degToRad",
+    "example": "display sinDeg(90)  ! Outputs 1",
+    "tags": [
+      "sindeg",
+      "trig",
+      "degrees",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-cosdeg",
+    "name": "cosDeg",
+    "category": "keyword",
+    "subcategory": "Trigonometric Function",
+    "title": "cosDeg / cosdeg — Trigonometric Cosine (Degrees)",
+    "summary": "Computes the cosine of an angle directly specified in degrees.",
+    "syntax": "cosDeg(degrees)",
+    "parameters": "degrees (num)",
+    "returns": "num (-1.0 to 1.0)",
+    "pairedWith": "sinDeg, degToRad",
+    "example": "display cosDeg(0)  ! Outputs 1",
+    "tags": [
+      "cosdeg",
+      "trig",
+      "degrees",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-degtorad",
+    "name": "degToRad",
+    "category": "keyword",
+    "subcategory": "Angle Conversion",
+    "title": "degToRad / degtorad — Degrees to Radians Conversion",
+    "summary": "Converts an angle from degrees to radians ($d \times \frac{pi}{180}$).",
+    "syntax": "degToRad(degrees)",
+    "parameters": "degrees (num)",
+    "returns": "num (radians)",
+    "pairedWith": "radToDeg, pi",
+    "example": "rad : degToRad(180)\ndisplay rad  ! Approximately 3.14159",
+    "tags": [
+      "degtorad",
+      "trig",
+      "conversion",
+      "angle"
+    ]
+  },
+  {
+    "id": "kw-radtodeg",
+    "name": "radToDeg",
+    "category": "keyword",
+    "subcategory": "Angle Conversion",
+    "title": "radToDeg / radtodeg — Radians to Degrees Conversion",
+    "summary": "Converts an angle from radians to degrees ($r \times \frac{180}{pi}$).",
+    "syntax": "radToDeg(radians)",
+    "parameters": "radians (num)",
+    "returns": "num (degrees)",
+    "pairedWith": "degToRad, pi",
+    "example": "deg : radToDeg(pi)\ndisplay deg  ! Outputs 180",
+    "tags": [
+      "radtodeg",
+      "trig",
+      "conversion",
+      "angle"
+    ]
+  },
+  {
+    "id": "kw-sign",
+    "name": "sign",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "sign / sgn — Signum Function",
+    "summary": "Extracts the sign of a number, returning -1 for negative numbers, 0 for zero, and +1 for positive numbers.",
+    "syntax": "sign(value) or sgn(value)",
+    "parameters": "value (num)",
+    "returns": "int (-1, 0, or 1)",
+    "pairedWith": "clamp",
+    "example": "display sign(-42)  ! Outputs -1\ndisplay sgn(10)   ! Outputs 1",
+    "tags": [
+      "sign",
+      "sgn",
+      "math",
+      "signum"
+    ]
+  },
+  {
+    "id": "kw-divrem",
+    "name": "divRem",
+    "category": "keyword",
+    "subcategory": "Arithmetic Operation",
+    "title": "divRem / divrem — Combined Division and Remainder",
+    "summary": "Computes integer quotient and remainder simultaneously, returning a two-element tuple `[quotient, remainder]`.",
+    "syntax": "divRem(numerator, denominator)",
+    "parameters": "numerator (int), denominator (int)",
+    "returns": "arr [quotient, remainder]",
+    "pairedWith": "//, %",
+    "example": "res : divRem(17, 5)\ndisplay \"Quotient: \" + res[0] + \", Remainder: \" + res[1]",
+    "tags": [
+      "divrem",
+      "math",
+      "division",
+      "modulo"
+    ]
+  },
+  {
+    "id": "kw-iseven",
+    "name": "isEven",
+    "category": "keyword",
+    "subcategory": "Numeric Predicate",
+    "title": "isEven / iseven — Functional Even Predicate",
+    "summary": "Functional call checking if an integer is even.",
+    "syntax": "isEven(n)",
+    "parameters": "n (int)",
+    "returns": "bool (true if divisible by 2)",
+    "pairedWith": "isOdd, is even",
+    "example": "display isEven(10)  ! true",
+    "tags": [
+      "iseven",
+      "predicate",
+      "math",
+      "parity"
+    ]
+  },
+  {
+    "id": "kw-isodd",
+    "name": "isOdd",
+    "category": "keyword",
+    "subcategory": "Numeric Predicate",
+    "title": "isOdd / isodd — Functional Odd Predicate",
+    "summary": "Functional call checking if an integer is odd.",
+    "syntax": "isOdd(n)",
+    "parameters": "n (int)",
+    "returns": "bool (true if odd)",
+    "pairedWith": "isEven, is odd",
+    "example": "display isOdd(7)  ! true",
+    "tags": [
+      "isodd",
+      "predicate",
+      "math",
+      "parity"
+    ]
+  },
+  {
+    "id": "kw-lerp",
+    "name": "lerp",
+    "category": "keyword",
+    "subcategory": "Interpolation Function",
+    "title": "lerp — Linear Interpolation",
+    "summary": "Calculates the linear interpolation between point a and point b for parameter t ($a + (b - a) \times t$).",
+    "syntax": "lerp(start, end, t)",
+    "parameters": "start (num), end (num), t (num from 0.0 to 1.0)",
+    "returns": "num (interpolated value)",
+    "pairedWith": "clamp",
+    "example": "mid : lerp(0, 100, 0.5)\ndisplay \"Midpoint: \" + mid  ! Outputs 50",
+    "tags": [
+      "lerp",
+      "math",
+      "interpolation",
+      "animation"
+    ]
+  },
+  {
+    "id": "kw-pi",
+    "name": "pi",
+    "category": "keyword",
+    "subcategory": "Math Constant",
+    "title": "pi — Archimedes' Mathematical Constant",
+    "summary": "Standard mathematical ratio of a circle's circumference to its diameter ($approx 3.141592653589793$).",
+    "syntax": "pi",
+    "parameters": "None",
+    "returns": "num (3.141592653589793)",
+    "pairedWith": "tau, degToRad",
+    "example": "circumference : 2 * pi * radius",
+    "tags": [
+      "pi",
+      "constant",
+      "math",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-tau",
+    "name": "tau",
+    "category": "keyword",
+    "subcategory": "Math Constant",
+    "title": "tau — Full Turn Circle Constant (2π)",
+    "summary": "The circle constant representing one full turn in radians ($2pi approx 6.283185307179586$).",
+    "syntax": "tau",
+    "parameters": "None",
+    "returns": "num (6.283185307179586)",
+    "pairedWith": "pi, sin, cos",
+    "example": "angle : tau * 0.25  ! Quarter turn (90 deg)",
+    "tags": [
+      "tau",
+      "constant",
+      "math",
+      "circle"
+    ]
+  },
+  {
+    "id": "kw-phi",
+    "name": "phi",
+    "category": "keyword",
+    "subcategory": "Math Constant",
+    "title": "phi — Golden Ratio Constant",
+    "summary": "The golden ratio constant $\frac{1 + sqrt{5}}{2} approx 1.618033988749895$.",
+    "syntax": "phi",
+    "parameters": "None",
+    "returns": "num (1.618033988749895)",
+    "pairedWith": "pi, sqrt",
+    "example": "goldenWidth : height * phi",
+    "tags": [
+      "phi",
+      "constant",
+      "math",
+      "golden-ratio"
+    ]
+  },
+  {
+    "id": "kw-inf",
+    "name": "inf",
+    "category": "keyword",
+    "subcategory": "Math Constant",
+    "title": "inf / infinity — Positive Infinity Constant",
+    "summary": "Represents positive infinity in IEEE floating-point arithmetic and numeric limits.",
+    "syntax": "inf or infinity",
+    "parameters": "None",
+    "returns": "num (Infinity)",
+    "pairedWith": "min, max",
+    "example": "minDist : inf\nfor d in distances:\n    if d < minDist: minDist : d",
+    "tags": [
+      "inf",
+      "infinity",
+      "constant",
+      "limits"
+    ]
+  },
+  {
+    "id": "kw-complex",
+    "name": "complex",
+    "category": "keyword",
+    "subcategory": "Complex Number Primitive",
+    "title": "complex — Complex Number Constructor",
+    "summary": "Instantiates a complex number with real and imaginary parts ($a + bi$).",
+    "syntax": "complex(real, imag) or 3 + 4i",
+    "parameters": "real (num), imag (num)",
+    "returns": "complex number instance",
+    "pairedWith": "real, imag, conj",
+    "example": "z : complex(3, 4)\ndisplay \"Complex: \" + z",
+    "tags": [
+      "complex",
+      "numbers",
+      "imaginary",
+      "math"
+    ]
+  },
+  {
+    "id": "kw-real",
+    "name": "real",
+    "category": "keyword",
+    "subcategory": "Complex Number Component",
+    "title": "real — Extract Real Component",
+    "summary": "Extracts the real component from a complex number instance.",
+    "syntax": "real(complex_val) or complex_val.real",
+    "parameters": "complex_val (complex)",
+    "returns": "num (real part)",
+    "pairedWith": "imag, complex",
+    "example": "z : complex(5, -2)\ndisplay \"Real: \" + real(z)  ! Outputs 5",
+    "tags": [
+      "real",
+      "complex",
+      "component",
+      "math"
+    ]
+  },
+  {
+    "id": "kw-imag",
+    "name": "imag",
+    "category": "keyword",
+    "subcategory": "Complex Number Component",
+    "title": "imag — Extract Imaginary Component",
+    "summary": "Extracts the imaginary component coefficient from a complex number instance.",
+    "syntax": "imag(complex_val) or complex_val.imag",
+    "parameters": "complex_val (complex)",
+    "returns": "num (imaginary part)",
+    "pairedWith": "real, complex",
+    "example": "z : complex(5, -2)\ndisplay \"Imag: \" + imag(z)  ! Outputs -2",
+    "tags": [
+      "imag",
+      "complex",
+      "component",
+      "math"
+    ]
+  },
+  {
+    "id": "kw-conj",
+    "name": "conj",
+    "category": "keyword",
+    "subcategory": "Complex Number Operation",
+    "title": "conj — Complex Conjugate",
+    "summary": "Computes the complex conjugate of $a + bi$, returning $a - bi$.",
+    "syntax": "conj(complex_val)",
+    "parameters": "complex_val (complex)",
+    "returns": "complex number ($a - bi$)",
+    "pairedWith": "complex, real, imag",
+    "example": "z : complex(3, 4)\nz_star : conj(z)\ndisplay \"Conjugate: \" + z_star  ! 3 - 4i",
+    "tags": [
+      "conj",
+      "complex",
+      "conjugate",
+      "algebra"
+    ]
+  },
+  {
+    "id": "kw-terminal",
+    "name": "terminal",
+    "category": "keyword",
+    "subcategory": "Terminal Control",
+    "title": "terminal — Console & Terminal Subsystem Controller",
+    "summary": "Accesses terminal control properties, cursor navigation, clear screen, and ANSI buffers.",
+    "syntax": "terminal.clear(), terminal.title(str)",
+    "parameters": "Terminal commands and methods",
+    "returns": "Terminal controller",
+    "pairedWith": "display, flush, focus",
+    "example": "terminal.title(\"VerScript Studio Server\")\nterminal.clear()",
+    "tags": [
+      "terminal",
+      "console",
+      "cli",
+      "ansi"
+    ]
+  },
+  {
+    "id": "kw-close",
+    "name": "close",
+    "category": "keyword",
+    "subcategory": "Resource Lifecycle",
+    "title": "close — Close Stream, Channel, or Session",
+    "summary": "Closes an active file handle, network socket, concurrency channel, or terminal session.",
+    "syntax": "close(handle)",
+    "parameters": "handle (channel, file, or socket)",
+    "returns": "None",
+    "pairedWith": "chan, load",
+    "example": "ch : chan<num>(5)\nclose(ch)",
+    "tags": [
+      "close",
+      "resource",
+      "channel",
+      "lifecycle"
+    ]
+  },
+  {
+    "id": "kw-flush",
+    "name": "flush",
+    "category": "keyword",
+    "subcategory": "I/O Control",
+    "title": "flush — Flush Output Buffers",
+    "summary": "Forces all pending output stream buffers to be written immediately to the console or file.",
+    "syntax": "flush() or stream.flush()",
+    "parameters": "None or stream target",
+    "returns": "None",
+    "pairedWith": "display, terminal",
+    "example": "display \"Computing...\" ?inline=true\nflush()",
+    "tags": [
+      "flush",
+      "io",
+      "buffer",
+      "terminal"
+    ]
+  },
+  {
+    "id": "kw-focus",
+    "name": "focus",
+    "category": "keyword",
+    "subcategory": "UI / Terminal Focus",
+    "title": "focus — Direct Viewport or Pane Focus",
+    "summary": "Directs keyboard and cursor focus to a specified UI element, window pane, or terminal view.",
+    "syntax": "focus(pane_identifier)",
+    "parameters": "pane_identifier (str)",
+    "returns": "None",
+    "pairedWith": "terminal, screen",
+    "example": "terminal.focus(\"output-pane\")",
+    "tags": [
+      "focus",
+      "ui",
+      "terminal",
+      "interaction"
+    ]
+  },
+  {
+    "id": "kw-title",
+    "name": "title",
+    "category": "keyword",
+    "subcategory": "Window / Terminal Metadata",
+    "title": "title — Set Window or Document Title",
+    "summary": "Sets the application window title or terminal tab title string.",
+    "syntax": "title(title_string)",
+    "parameters": "title_string (str)",
+    "returns": "None",
+    "pairedWith": "terminal, config",
+    "example": "title \"VerScript Simulator v2.0\"",
+    "tags": [
+      "title",
+      "window",
+      "terminal",
+      "metadata"
+    ]
+  },
+  {
+    "id": "kw-split",
+    "name": "split",
+    "category": "keyword",
+    "subcategory": "Layout & Text Splitting",
+    "title": "split — Split Panes or Delimited Strings",
+    "summary": "Dual-purpose keyword: splits strings by a delimiter or splits terminal viewports into tiled panes.",
+    "syntax": "str.split(delim) or terminal.split(direction)",
+    "parameters": "delim (str) or direction (\"horizontal\" | \"vertical\")",
+    "returns": "arr of strings or new pane handle",
+    "pairedWith": "join, terminal",
+    "example": "words : \"apple,banana,orange\".split(\",\")\ndisplay words[0]",
+    "tags": [
+      "split",
+      "string",
+      "terminal",
+      "layout"
+    ]
+  },
+  {
+    "id": "kw-render",
+    "name": "render",
+    "category": "keyword",
+    "subcategory": "Graphics & Rendering",
+    "title": "render — Trigger Frame Rasterization",
+    "summary": "Initiates rasterization of active scene geometry and visual elements onto the screen canvas.",
+    "syntax": "render(scene, camera)",
+    "parameters": "scene (scene object), camera (camera object)",
+    "returns": "None",
+    "pairedWith": "screen, scene, camera, frame",
+    "example": "render(mainScene, mainCamera)",
+    "tags": [
+      "render",
+      "graphics",
+      "engine",
+      "frame"
+    ]
+  },
+  {
+    "id": "kw-screen",
+    "name": "screen",
+    "category": "keyword",
+    "subcategory": "Graphics Canvas",
+    "title": "screen — Canvas & Viewport Surface Descriptor",
+    "summary": "Configures and accesses the graphics display surface resolution, refresh rate, and pixel buffers.",
+    "syntax": "screen(width, height, title)",
+    "parameters": "width (int), height (int), title (str)",
+    "returns": "screen canvas context",
+    "pairedWith": "render, draw, pixel",
+    "example": "screen(800, 600, \"VerScript 2D Sandbox\")",
+    "tags": [
+      "screen",
+      "canvas",
+      "graphics",
+      "display"
+    ]
+  },
+  {
+    "id": "kw-world",
+    "name": "world",
+    "category": "keyword",
+    "subcategory": "Spatial Environment",
+    "title": "world — 3D Spatial Container & Physics Environment",
+    "summary": "Defines the 3D spatial simulation coordinate space and physics world settings.",
+    "syntax": "world(gravity, bounds)",
+    "parameters": "gravity (vector), bounds (box)",
+    "returns": "world container object",
+    "pairedWith": "spawn, scene, light",
+    "example": "simWorld : world([0, -9.8, 0])",
+    "tags": [
+      "world",
+      "physics",
+      "3d",
+      "spatial"
+    ]
+  },
+  {
+    "id": "kw-draw",
+    "name": "draw",
+    "category": "keyword",
+    "subcategory": "Immediate Graphics",
+    "title": "draw — Immediate-Mode Shape Rendering",
+    "summary": "Issues immediate 2D drawing instructions for geometric primitives.",
+    "syntax": "draw(shape, x, y)",
+    "parameters": "shape (rect, circle, line), coordinates",
+    "returns": "None",
+    "pairedWith": "rect, circle, fill, stroke",
+    "example": "draw rect(100, 100, 50, 50) ?fill=#00FFCC",
+    "tags": [
+      "draw",
+      "graphics",
+      "2d",
+      "shapes"
+    ]
+  },
+  {
+    "id": "kw-spawn",
+    "name": "spawn",
+    "category": "keyword",
+    "subcategory": "Entity Instantiation",
+    "title": "spawn — Instantiate Scene Entity",
+    "summary": "Spawns a game object, actor, or geometry mesh into the active scene hierarchy.",
+    "syntax": "spawn entity at position",
+    "parameters": "entity (object), position (vector)",
+    "returns": "spawned instance handle",
+    "pairedWith": "world, scene, inst",
+    "example": "player : spawn Entity(\"Hero\") at [0, 0, 0]",
+    "tags": [
+      "spawn",
+      "entity",
+      "scene",
+      "instantiate"
+    ]
+  },
+  {
+    "id": "kw-camera",
+    "name": "camera",
+    "category": "keyword",
+    "subcategory": "Camera & Projection",
+    "title": "camera — Viewport Projection & Camera Controller",
+    "summary": "Constructs and positions a virtual perspective or orthographic camera.",
+    "syntax": "camera(fov, aspect, near, far)",
+    "parameters": "fov (field of view in degrees), aspect (aspect ratio)",
+    "returns": "camera controller instance",
+    "pairedWith": "render, scene",
+    "example": "cam : camera(60, 16/9, 0.1, 1000)\ncam.position : [0, 5, 10]",
+    "tags": [
+      "camera",
+      "projection",
+      "viewport",
+      "3d"
+    ]
+  },
+  {
+    "id": "kw-light",
+    "name": "light",
+    "category": "keyword",
+    "subcategory": "Scene Illumination",
+    "title": "light — Illumination Source Descriptor",
+    "summary": "Adds ambient, directional, or point lighting to a 3D scene.",
+    "syntax": "light(type, color, intensity)",
+    "parameters": "type (\"ambient\" | \"point\" | \"sun\"), color (hex), intensity (num)",
+    "returns": "light instance",
+    "pairedWith": "scene, world, render",
+    "example": "sun : light(\"sun\", #FFFFFF, 1.2)",
+    "tags": [
+      "light",
+      "illumination",
+      "shader",
+      "3d"
+    ]
+  },
+  {
+    "id": "kw-scene",
+    "name": "scene",
+    "category": "keyword",
+    "subcategory": "Scene Graph",
+    "title": "scene — Scene Graph Container",
+    "summary": "Container managing all entities, lights, meshes, and cameras for a visual frame.",
+    "syntax": "scene() or scene.add(entity)",
+    "parameters": "None or entity list",
+    "returns": "scene graph object",
+    "pairedWith": "render, world, camera",
+    "example": "lvl : scene()\nlvl.add(sun)\nlvl.add(player)",
+    "tags": [
+      "scene",
+      "scenegraph",
+      "entities",
+      "graphics"
+    ]
+  },
+  {
+    "id": "kw-rect",
+    "name": "rect",
+    "category": "keyword",
+    "subcategory": "Geometry Primitive",
+    "title": "rect — 2D Rectangle Geometry Primitive",
+    "summary": "Constructs a 2D rectangular shape with position, width, and height.",
+    "syntax": "rect(x, y, width, height)",
+    "parameters": "x (num), y (num), width (num), height (num)",
+    "returns": "rect geometry shape",
+    "pairedWith": "draw, circle, fill",
+    "example": "box2d : rect(50, 50, 200, 100)",
+    "tags": [
+      "rect",
+      "rectangle",
+      "shape",
+      "2d"
+    ]
+  },
+  {
+    "id": "kw-circle",
+    "name": "circle",
+    "category": "keyword",
+    "subcategory": "Geometry Primitive",
+    "title": "circle — 2D Circle Geometry Primitive",
+    "summary": "Constructs a 2D circle with center coordinates and radius.",
+    "syntax": "circle(centerX, centerY, radius)",
+    "parameters": "centerX (num), centerY (num), radius (num)",
+    "returns": "circle geometry shape",
+    "pairedWith": "draw, rect, fill",
+    "example": "coin : circle(150, 150, 25)",
+    "tags": [
+      "circle",
+      "shape",
+      "geometry",
+      "2d"
+    ]
+  },
+  {
+    "id": "kw-line",
+    "name": "line",
+    "category": "keyword",
+    "subcategory": "Geometry Primitive",
+    "title": "line — Vector Line Segment",
+    "summary": "Constructs a line segment between two coordinate points.",
+    "syntax": "line(x1, y1, x2, y2)",
+    "parameters": "Start and end coordinates",
+    "returns": "line geometry shape",
+    "pairedWith": "draw, stroke",
+    "example": "ray : line(0, 0, 100, 100)",
+    "tags": [
+      "line",
+      "vector",
+      "geometry",
+      "stroke"
+    ]
+  },
+  {
+    "id": "kw-box",
+    "name": "box",
+    "category": "keyword",
+    "subcategory": "3D Mesh Primitive",
+    "title": "box — 3D Cuboid Mesh Primitive",
+    "summary": "Constructs a 3D cuboid mesh with width, height, and depth dimensions.",
+    "syntax": "box(width, height, depth)",
+    "parameters": "width (num), height (num), depth (num)",
+    "returns": "3D mesh object",
+    "pairedWith": "sphere, spawn, scene",
+    "example": "crate : box(2, 2, 2)",
+    "tags": [
+      "box",
+      "cube",
+      "mesh",
+      "3d"
+    ]
+  },
+  {
+    "id": "kw-sphere",
+    "name": "sphere",
+    "category": "keyword",
+    "subcategory": "3D Mesh Primitive",
+    "title": "sphere — 3D Spherical Mesh Primitive",
+    "summary": "Constructs a 3D spherical mesh with a defined radius and radial segments.",
+    "syntax": "sphere(radius, segments)",
+    "parameters": "radius (num), segments (int)",
+    "returns": "3D spherical mesh",
+    "pairedWith": "box, spawn, scene",
+    "example": "orb : sphere(1.5, 32)",
+    "tags": [
+      "sphere",
+      "mesh",
+      "3d",
+      "geometry"
+    ]
+  },
+  {
+    "id": "kw-fill",
+    "name": "fill",
+    "category": "keyword",
+    "subcategory": "Style Specification",
+    "title": "fill — Surface Fill Color Specification",
+    "summary": "Applies solid color, gradient, or texture fill to a 2D shape or material.",
+    "syntax": "fill color_value or ?fill=#hex",
+    "parameters": "color_value (hex, rgb, or color name)",
+    "returns": "Applies fill style",
+    "pairedWith": "stroke, draw, rect",
+    "example": "draw circle(100, 100, 40) ?fill=#BD00FF",
+    "tags": [
+      "fill",
+      "color",
+      "style",
+      "graphics"
+    ]
+  },
+  {
+    "id": "kw-stroke",
+    "name": "stroke",
+    "category": "keyword",
+    "subcategory": "Style Specification",
+    "title": "stroke — Border & Outline Specification",
+    "summary": "Specifies outline color and border width for drawing primitives.",
+    "syntax": "stroke(color, width) or ?stroke=#hex ?strokeWidth=2",
+    "parameters": "color (hex), width (num)",
+    "returns": "Applies stroke style",
+    "pairedWith": "fill, draw, line",
+    "example": "draw rect(20, 20, 80, 80) ?stroke=#00FFCC ?strokeWidth=2",
+    "tags": [
+      "stroke",
+      "outline",
+      "border",
+      "graphics"
+    ]
+  },
+  {
+    "id": "kw-pixel",
+    "name": "pixel",
+    "category": "keyword",
+    "subcategory": "Framebuffer Manipulation",
+    "title": "pixel — Direct Framebuffer Pixel Access",
+    "summary": "Sets or retrieves raw RGBA pixel color at $(x, y)$ coordinate on the active surface.",
+    "syntax": "pixel(x, y) : color",
+    "parameters": "x (int), y (int), color (hex / uint32)",
+    "returns": "Reads or writes pixel",
+    "pairedWith": "screen, draw",
+    "example": "screen.pixel(400, 300) : #00FFCC",
+    "tags": [
+      "pixel",
+      "framebuffer",
+      "raster",
+      "canvas"
+    ]
+  },
+  {
+    "id": "kw-frame",
+    "name": "frame",
+    "category": "keyword",
+    "subcategory": "Animation & Delta Time",
+    "title": "frame — Render Frame Clock & Delta Time",
+    "summary": "Provides timing context and delta time ($Delta t$) within game loops and animation callbacks.",
+    "syntax": "on frame(delta):\n    ...",
+    "parameters": "delta (num elapsed seconds)",
+    "returns": "Frame execution context",
+    "pairedWith": "on, loop, render",
+    "example": "on frame(dt):\n    player.x : player.x + (speed * dt)",
+    "tags": [
+      "frame",
+      "deltatime",
+      "animation",
+      "loop"
+    ]
+  },
+  {
+    "id": "kw-infinity",
+    "name": "infinity",
+    "category": "keyword",
+    "subcategory": "Math Constant",
+    "title": "infinity — Full Keyword for Positive Infinity",
+    "summary": "Represents positive infinity in numeric computations and upper limits.",
+    "syntax": "infinity",
+    "parameters": "None",
+    "returns": "num (Infinity)",
+    "pairedWith": "inf, min, max",
+    "example": "val : infinity\nif x < val: display \"Within bounds\"",
+    "tags": [
+      "infinity",
+      "inf",
+      "constant",
+      "limits"
+    ]
+  },
+  {
+    "id": "kw-method",
+    "name": "method",
+    "category": "keyword",
+    "subcategory": "Class Method Declaration",
+    "title": "method — Object & Class Method Declaration",
+    "summary": "Declares a member function within a class definition with access to instance state.",
+    "syntax": "method methodName(args):\n    ...",
+    "parameters": "methodName (identifier), args",
+    "returns": "Defines member method",
+    "pairedWith": "class, func, def, reply",
+    "example": "class Account:\n    method deposit(amount):\n        balance : balance + amount",
+    "tags": [
+      "method",
+      "class",
+      "oop",
+      "function"
+    ]
+  },
+  {
+    "id": "kw-sgn",
+    "name": "sgn",
+    "category": "keyword",
+    "subcategory": "Built-in Math Function",
+    "title": "sgn — Signum Function Alias",
+    "summary": "Returns -1 for negative numbers, 0 for zero, and +1 for positive numbers.",
+    "syntax": "sgn(value)",
+    "parameters": "value (num)",
+    "returns": "int (-1, 0, or 1)",
+    "pairedWith": "sign, clamp",
+    "example": "display sgn(-15)  ! Outputs -1",
+    "tags": [
+      "sgn",
+      "sign",
+      "math",
+      "signum"
+    ]
+  },
+  {
+    "id": "kw-sync",
+    "name": "sync",
+    "category": "keyword",
+    "subcategory": "Concurrency & Synchronization",
+    "title": "sync — Synchronous Block Execution",
+    "summary": "Blocks and synchronizes execution until an async task, promise, or channel completes.",
+    "syntax": "sync:\n  action()",
+    "parameters": "None",
+    "returns": "Blocks until completion",
+    "pairedWith": "async, chan, emit",
+    "example": "sync:\n    display \"Synchronous critical section\"",
+    "tags": [
+      "sync",
+      "async",
+      "concurrency",
+      "channel"
     ]
   }
 ]
