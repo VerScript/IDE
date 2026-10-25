@@ -6056,5 +6056,6 @@ const VERSCRIPT_HELP_DB = [
     ]
   }
 ];
+/* eslint-disable-next-line no-undef */
 if (typeof module !== 'undefined' && module.exports) module.exports = { VERSCRIPT_HELP_DB };
 if (typeof window !== 'undefined') window.VERSCRIPT_HELP_DB = VERSCRIPT_HELP_DB;

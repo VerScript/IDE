@@ -4290,4 +4290,5 @@ window.VERSCRIPT_HELP_DB = [
     ]
   }
 ];
+/* eslint-disable-next-line no-undef */
 if (typeof module !== 'undefined' && module.exports) module.exports = window.VERSCRIPT_HELP_DB;
