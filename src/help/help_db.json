@@ -6053,5 +6053,22 @@
       "concurrency",
       "channel"
     ]
+  },
+  {
+    "id": "kw-null",
+    "name": "null",
+    "category": "keyword",
+    "subcategory": "Language Keyword",
+    "title": "null — VerScript Language Keyword",
+    "summary": "Built-in keyword recognized by the compiler lexer.",
+    "syntax": "null",
+    "parameters": "None",
+    "returns": "Language construct",
+    "example": "null",
+    "tags": [
+      "null",
+      "keyword",
+      "language"
+    ]
   }
 ]
