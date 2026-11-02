@@ -452,7 +452,6 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
 
             // 1. Output commands: display, print, println, echo, log
             if (line.startsWith('display ') || line === 'display' || line.startsWith('println ') || line === 'println' || line.startsWith('print ') || line.startsWith('echo ') || line.startsWith('log ') || line.startsWith('Log.info(')) {
-                let isPrint = line.startsWith('print ');
                 let isLog = line.startsWith('log ') || line.startsWith('Log.');
                 let cmdLen = line.indexOf(' ');
                 if (cmdLen === -1) cmdLen = line.length;
@@ -539,7 +538,7 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
                     const srcExpr = match[2].trim();
                     let srcVal = vars[srcExpr] !== undefined ? vars[srcExpr] : evalSimpleExpr(srcExpr, vars);
                     if (typeof srcVal === 'string' && srcVal.startsWith('[') && srcVal.endsWith(']')) {
-                        try { srcVal = JSON.parse(srcVal); } catch (_) {}
+                        try { srcVal = JSON.parse(srcVal); } catch { /* ignore */ }
                     } else if (typeof srcVal === 'string' && srcVal.includes(',')) {
                         srcVal = srcVal.split(',').map(s => isNaN(Number(s.trim())) ? s.trim() : Number(s.trim()));
                     }
