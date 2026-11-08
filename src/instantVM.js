@@ -550,12 +550,23 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
                 }
                 i++;
             }
-            // 6. Terminal subsystem: terminal.title, terminal.clear, flush, focus, title, split
+            // 6. Terminal subsystem: terminal.title, terminal.clear, cursor, progress, box, flush, focus, split
             else if (line.startsWith('terminal.') || line.startsWith('terminal ') || line === 'terminal' || line.startsWith('flush') || line.startsWith('focus') || line.startsWith('title ')) {
                 if (line.includes('title')) {
                     const m = line.match(/title\s*(?:\(\s*["']([^"']+)["']\s*\)|["']([^"']+)["'])/);
                     const titleText = m ? (m[1] || m[2]) : 'VerScript Terminal';
                     onOutputLine({ type: 'success', text: `\x1b[36m[Terminal] Window title set to: "${titleText}"\x1b[0m` });
+                } else if (line.includes('cursor')) {
+                    const m = line.match(/cursor\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
+                    onOutputLine({ type: 'success', text: `\x1b[36m[Terminal] Cursor moved to (${m ? m[1] : 1}, ${m ? m[2] : 1})\x1b[0m` });
+                } else if (line.includes('progress')) {
+                    const m = line.match(/progress\s*\(\s*(\d+)(?:\s*,\s*(\d+))?\s*\)/);
+                    const pct = m ? parseInt(m[1]) : 50;
+                    const width = m && m[2] ? parseInt(m[2]) : 20;
+                    const filled = Math.round((pct * width) / 100);
+                    onOutputLine({ type: 'success', text: `[${'='.repeat(filled)}>${' '.repeat(Math.max(0, width - filled - 1))}] ${pct}%` });
+                } else if (line.includes('box')) {
+                    onOutputLine({ type: 'success', text: `+----------------------+\n| Terminal Box Widget  |\n+----------------------+` });
                 } else if (line.includes('clear')) {
                     onOutputLine({ type: 'system', text: `[Terminal Screen Cleared]` });
                 } else if (line.includes('split')) {
@@ -565,6 +576,10 @@ export async function simulateVerScriptAsync(code, files = null, stdin = '', onO
                 } else if (line.startsWith('focus')) {
                     onOutputLine({ type: 'success', text: `\x1b[36m[Terminal] Input focus acquired\x1b[0m` });
                 }
+                i++;
+            }
+            // 6b. Canvas matrix stack
+            else if (line.startsWith('canvas.') || line.startsWith('canvas ')) {
                 i++;
             }
             // 7. Graphics & 2D/3D Game Engine: screen, world, render, draw, camera, light, scene, spawn

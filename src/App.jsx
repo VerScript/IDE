@@ -1,3 +1,4 @@
+import VisualViewport from './VisualViewport.jsx';
 import { simulateVerScriptAsync } from './instantVM.js';
 import { useState, useRef, useEffect } from 'react';
 import Editor from './MonacoEditor.jsx';
@@ -438,6 +439,14 @@ const handleEditorWillMount = (monaco) => {
         { label: 'chan', insertText: 'set ${1:ch}: chan(${2:5})', isSnippet: true, detail: 'Create concurrency channel with capacity' },
         { label: 'send', insertText: 'send ${1:ch} <- ${2:val}', isSnippet: true, detail: 'Send value into concurrency channel' },
         { label: 'recv', insertText: 'recv ${1:val} <- ${2:ch}', isSnippet: true, detail: 'Receive value from concurrency channel' },
+        { label: 'roundedRect', insertText: 'roundedRect(${1:x}, ${2:y}, ${3:w}, ${4:h}, ${5:radius})', isSnippet: true, detail: '2D rounded rectangle primitive' },
+        { label: 'ellipse', insertText: 'ellipse(${1:x}, ${2:y}, ${3:rx}, ${4:ry})', isSnippet: true, detail: '2D ellipse primitive' },
+        { label: 'triangle', insertText: 'triangle(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})', isSnippet: true, detail: '2D triangle primitive' },
+        { label: 'polygon', insertText: 'polygon([${1:x1, y1, x2, y2, x3, y3}])', isSnippet: true, detail: '2D closed polygon primitive' },
+        { label: 'canvas', insertText: 'canvas ${1:c}', isSnippet: true, detail: '2D canvas surface or matrix stack' },
+        { label: 'cylinder', insertText: 'mesh.cylinder(${1:radiusTop}, ${2:radiusBottom}, ${3:height}, ${4:segments})', isSnippet: true, detail: '3D cylinder geometric mesh' },
+        { label: 'cone', insertText: 'mesh.cone(${1:radius}, ${2:height}, ${3:segments})', isSnippet: true, detail: '3D cone geometric mesh' },
+        { label: 'torus', insertText: 'mesh.torus(${1:radius}, ${2:tubeRadius}, ${3:radialSegs}, ${4:tubularSegs})', isSnippet: true, detail: '3D torus geometric mesh' },
         { label: 'match', insertText: 'match ${1:expr} with\n    ${2:pattern} -> ${3:action}', isSnippet: true, detail: 'Pattern matching construct' },
         { label: 'with', insertText: 'with ', detail: 'Match statement pattern target' },
         { label: 'is', insertText: 'is ', detail: 'Comparison operator keyword' },
@@ -692,6 +701,14 @@ const handleEditorWillMount = (monaco) => {
 
       const HOVER_DOCS = {
         'display': '**display** statement\n\nPrints expressions to standard output.\n\nAttributes:\n- `?color="cyan"` or `?color=#00ffcc` - Colorized terminal output\n- `?newline=false` - Suppress trailing newline',
+        'roundedRect': '**roundedRect**(x, y, width, height, radius)\n\nDraws a 2D rectangle with smooth rounded corners.\n\nAttributes:\n- `?fill=#color` - Fill color\n- `?stroke=#color` - Border outline color',
+        'ellipse': '**ellipse**(x, y, radiusX, radiusY)\n\nDraws a 2D smooth ellipse centered at (x, y).\n\nAttributes:\n- `?fill=#color` - Fill color\n- `?stroke=#color` - Border outline color',
+        'triangle': '**triangle**(x1, y1, x2, y2, x3, y3)\n\nDraws a 2D 3-vertex triangle.\n\nAttributes:\n- `?fill=#color` - Fill color\n- `?stroke=#color` - Border outline color',
+        'polygon': '**polygon**([x1, y1, x2, y2, ...])\n\nDraws an arbitrary closed 2D polygon with n coordinate pairs.\n\nAttributes:\n- `?fill=#color` - Fill color\n- `?stroke=#color` - Border outline color',
+        'canvas': '**canvas** module / matrix stack\n\nProvides 2D coordinate transformations: `canvas.push()`, `canvas.pop()`, `canvas.translate(x, y)`, `canvas.rotate(deg)`, `canvas.scale(sx, sy)`.',
+        'cylinder': '**mesh.cylinder**(radiusTop, radiusBottom, height, segments)\n\nConstructs a 3D cylindrical mesh geometry with top and bottom caps.',
+        'cone': '**mesh.cone**(radius, height, segments)\n\nConstructs a 3D cone mesh geometry with apex vertex and circular base.',
+        'torus': '**mesh.torus**(radius, tubeRadius, radialSegments, tubularSegments)\n\nConstructs a 3D donut/toroid mesh geometry.',
         'prompt': '**prompt** statement\n\nReads a line of interactive text input into a variable.\n\nAttributes:\n- `?default="Val"` - Fallback default when input is empty',
         'header': '**header** declaration\n\nDefines a typed interface contract in `.h.vrs` files.\n\nExample:\n```verscript\nheader MathService:\n    func add(a, b)\n```',
         'include': '**include** directive\n\nIncludes a header contract file (`.h.vrs`). Validates that implementations match the contract signatures.',
@@ -1738,8 +1755,13 @@ function App() {
       setActiveFileName(renamedActive);
       runName = renamedActive;
     }
+    const hasVisuals = code.includes('screen(') || code.includes('scene(') || code.includes('mesh.') || code.includes('draw ') || code.includes('canvas.');
     setIsRunning(true);
-    setTerminalTab('output');
+    if (hasVisuals) {
+      setTerminalTab('viewport');
+    } else {
+      setTerminalTab('output');
+    }
 
     const allFiles = files.map(f => f.name === activeFileName ? { name: f.name, content: code } : { name: f.name, content: f.content });
 
@@ -2317,7 +2339,28 @@ function App() {
                     fontWeight: 'bold'
                   }}
                 >
-                  📥 Stdin / Custom Input {stdinInput.trim() ? '●' : ''}
+                  📥 Stdin {stdinInput.trim() ? '●' : ''}
+                </button>
+                <button
+                  type="button"
+                  id="btnViewportTab"
+                  className={`terminal-tab-btn ${terminalTab === 'viewport' ? 'active' : ''}`}
+                  onClick={() => setTerminalTab('viewport')}
+                  style={{
+                    background: terminalTab === 'viewport' ? 'rgba(0, 255, 204, 0.15)' : 'transparent',
+                    border: '1px solid ' + (terminalTab === 'viewport' ? '#00FFCC' : 'transparent'),
+                    color: terminalTab === 'viewport' ? '#00FFCC' : '#6272A4',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  🖥️ Visual Viewport
                 </button>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -2364,6 +2407,8 @@ function App() {
                   }}
                 />
               </div>
+            ) : terminalTab === 'viewport' ? (
+              <VisualViewport code={code} />
             ) : (
               <div className="terminal-output" ref={terminalRef} style={{ display: 'flex', flexDirection: 'column' }}>
                 {output.map((line, i) => (
