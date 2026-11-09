@@ -1,16 +1,12 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 export default function VisualViewport({ code }) {
   const canvasRef = useRef(null);
   const [wireframe, setWireframe] = useState(false);
   const [orbit, setOrbit] = useState({ pitch: 25, yaw: 35, isDragging: false, lastX: 0, lastY: 0 });
-  const [viewMode, setViewMode] = useState('2D'); // '2D' or '3D'
 
   const is3D = code.includes('scene(') || code.includes('world(') || code.includes('mesh.') || code.includes('camera(');
 
-  useEffect(() => {
-    setViewMode(is3D ? '3D' : '2D');
-  }, [is3D]);
 
   const resetCamera = () => {
     setOrbit(prev => ({ ...prev, pitch: 25, yaw: 35 }));
@@ -21,7 +17,7 @@ export default function VisualViewport({ code }) {
     const url = canvasRef.current.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `verscript_${viewMode.toLowerCase()}_snapshot.png`;
+    a.download = `verscript_${(is3D ? "3D" : "2D").toLowerCase()}_snapshot.png`;
     a.click();
   };
 
