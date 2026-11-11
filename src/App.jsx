@@ -1,6 +1,7 @@
 import VisualViewport from './VisualViewport.jsx';
 import { simulateVerScriptAsync } from './instantVM.js';
-import { useState, useRef, useEffect } from 'react';
+
+import { useState, useRef, useEffect } from 'react';
 import Editor from './MonacoEditor.jsx';
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -1009,6 +1010,7 @@ function renderAnsiLine(rawText) {
         .replace(/\\x1b\[/gi, '\x1b[')
         .replace(/\\u001b\[/gi, '\x1b[')
         // Strip non-SGR VT100 / ANSI escape sequences (cursor positions, clear screen, cursor show/hide, line clear, etc.)
+        // eslint-disable-next-line no-control-regex
         .replace(/\x1b\[[0-9;?]*[A-LN-Za-ln-z]/g, '')
         .replace(/\r/g, '');
 
